@@ -9,8 +9,8 @@ interface BookSpreadProps {
   fontSize: FontSize;
   fontFamily?: FontFamily;
   bookId?: string;
-  displayNumbers: [number | undefined, number | undefined];
-  totalStoryPages: number;
+  leftLabel?: string;
+  rightLabel?: string;
   animKey: number;
   animDirection: "next" | "prev" | null;
 }
@@ -21,45 +21,53 @@ export default function BookSpread({
   fontSize,
   fontFamily,
   bookId,
-  displayNumbers,
-  totalStoryPages,
+  leftLabel,
+  rightLabel,
   animKey,
   animDirection,
 }: BookSpreadProps) {
-  const animClass =
+  const cls =
     animDirection === "next"
-      ? "spread-enter-next"
+      ? "spread-next"
       : animDirection === "prev"
-      ? "spread-enter-prev"
+      ? "spread-prev"
       : "";
 
   return (
     <>
       <style>{`
-        @keyframes spreadFromRight {
-          from { transform: translateX(22px); opacity: 0; }
-          to   { transform: translateX(0);    opacity: 1; }
-        }
-        @keyframes spreadFromLeft {
-          from { transform: translateX(-22px); opacity: 0; }
-          to   { transform: translateX(0);     opacity: 1; }
-        }
-        .spread-enter-next { animation: spreadFromRight 0.28s ease-out; }
-        .spread-enter-prev { animation: spreadFromLeft  0.28s ease-out; }
+        @keyframes sNext { from { transform: translateX(18px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes sPrev { from { transform: translateX(-18px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        .spread-next { animation: sNext 0.25s cubic-bezier(0.22,1,0.36,1); }
+        .spread-prev { animation: sPrev 0.25s cubic-bezier(0.22,1,0.36,1); }
       `}</style>
 
+      {/* Outer book shadow */}
       <div
         key={animKey}
-        className={`relative flex rounded-lg overflow-hidden ${animClass}`}
+        className={cls}
         style={{
-          width: "min(92vw, 1060px)",
-          height: "min(66vh, 620px)",
+          width: "min(94vw, 1080px)",
+          height: "min(72vh, 640px)",
+          minHeight: 380,
+          display: "flex",
+          borderRadius: 4,
           boxShadow:
-            "0 8px 24px rgba(0,0,0,0.18), 0 2px 6px rgba(0,0,0,0.12)",
+            "0 4px 6px rgba(0,0,0,0.06), 0 12px 32px rgba(0,0,0,0.18), 0 28px 56px rgba(0,0,0,0.12)",
+          position: "relative",
         }}
       >
         {/* Left page */}
-        <div className="w-1/2 h-full border-r border-gray-200 relative">
+        <div
+          style={{
+            width: "50%",
+            height: "100%",
+            borderRadius: "4px 0 0 4px",
+            overflow: "hidden",
+            boxShadow: "inset -1px 0 0 rgba(0,0,0,0.06)",
+            flexShrink: 0,
+          }}
+        >
           {leftPage ? (
             <BookPage
               page={leftPage}
@@ -67,27 +75,50 @@ export default function BookSpread({
               fontFamily={fontFamily}
               bookId={bookId}
               side="left"
-              displayNumber={displayNumbers[0]}
-              totalPages={totalStoryPages}
+              pageLabel={leftLabel}
             />
           ) : (
-            <div className="h-full bg-white flex items-center justify-center">
-              <span className="text-gray-100 text-6xl">📖</span>
+            <div
+              style={{
+                height: "100%",
+                background: "#FFFEF9",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <span style={{ fontSize: 40, opacity: 0.08 }}>📖</span>
             </div>
           )}
         </div>
 
         {/* Center gutter */}
         <div
-          className="absolute left-1/2 -translate-x-1/2 top-0 bottom-0 w-6 pointer-events-none z-10"
           style={{
+            position: "absolute",
+            left: "50%",
+            transform: "translateX(-50%)",
+            top: 0,
+            bottom: 0,
+            width: 10,
+            pointerEvents: "none",
+            zIndex: 2,
             background:
-              "linear-gradient(to right, rgba(0,0,0,0.07) 0%, rgba(0,0,0,0.03) 30%, rgba(0,0,0,0.03) 70%, rgba(0,0,0,0.07) 100%)",
+              "linear-gradient(to right, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.04) 40%, rgba(0,0,0,0.04) 60%, rgba(0,0,0,0.1) 100%)",
           }}
         />
 
         {/* Right page */}
-        <div className="w-1/2 h-full relative">
+        <div
+          style={{
+            width: "50%",
+            height: "100%",
+            borderRadius: "0 4px 4px 0",
+            overflow: "hidden",
+            boxShadow: "inset 1px 0 0 rgba(0,0,0,0.06)",
+            flexShrink: 0,
+          }}
+        >
           {rightPage ? (
             <BookPage
               page={rightPage}
@@ -95,20 +126,24 @@ export default function BookSpread({
               fontFamily={fontFamily}
               bookId={bookId}
               side="right"
-              displayNumber={displayNumbers[1]}
-              totalPages={totalStoryPages}
+              pageLabel={rightLabel}
             />
           ) : (
-            <div className="h-full bg-white" />
+            <div style={{ height: "100%", background: "#FFFEF9" }} />
           )}
         </div>
 
-        {/* Outer page shadow (bottom) */}
+        {/* Bottom page-edge shadow */}
         <div
-          className="absolute bottom-0 left-0 right-0 h-3 pointer-events-none"
           style={{
-            background:
-              "linear-gradient(to top, rgba(0,0,0,0.08), transparent)",
+            position: "absolute",
+            bottom: 0,
+            left: 0,
+            right: 0,
+            height: 6,
+            borderRadius: "0 0 4px 4px",
+            pointerEvents: "none",
+            background: "linear-gradient(to top, rgba(0,0,0,0.1), transparent)",
           }}
         />
       </div>

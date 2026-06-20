@@ -1,40 +1,37 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import type { BookReaderData, BookReaderPage, FontSize, FontFamily, ReaderMode } from "@/types/reader";
-import { FONT_SIZES, FONT_FAMILIES } from "@/types/reader";
+import type { BookReaderData, BookReaderPage, FontSize, FontFamily } from "@/types/reader";
+import { FONT_SIZE_PX, FONT_SIZES, FONT_FAMILIES } from "@/types/reader";
 
 import BookCover from "./BookCover";
 import BookSpread from "./BookSpread";
 import BookPage from "./BookPage";
-import PageTurnControls from "./PageTurnControls";
+import FontSizeControls from "./FontSizeControls";
+import FontFamilyControls from "./FontFamilyControls";
 import ReaderProgress from "./ReaderProgress";
-import ReaderToolbar from "./ReaderToolbar";
 import WonderHandHint from "./WonderHandHint";
 
-const LS_FONT_SIZE_KEY = "wk_font_size_v1";
-const LS_FONT_FAMILY_KEY = "wk_font_family_v1";
+const LS_SIZE = "wk_font_size_v1";
+const LS_FAMILY = "wk_font_family_v1";
 
 interface RealBookReaderProps {
   data: BookReaderData;
   bookId?: string;
   backHref?: string;
   backLabel?: string;
-  // Review mode callbacks
   onApprove?: () => void;
   onRequestChanges?: (feedback: string) => void;
-  // Final mode callbacks
   onDownload?: () => void;
   onShare?: () => void;
 }
 
-/** Sort pages into canonical reading order */
 function sortPages(pages: BookReaderPage[]): BookReaderPage[] {
   return [...pages].sort((a, b) => {
-    if (a.pageType === "cover") return -1;
-    if (b.pageType === "cover") return 1;
-    if (a.pageType === "dedication") return -1;
-    if (b.pageType === "dedication") return 1;
+    if (a.pageType === "cover" && b.pageType !== "cover") return -1;
+    if (b.pageType === "cover" && a.pageType !== "cover") return 1;
+    if (a.pageType === "dedication" && b.pageType !== "dedication") return -1;
+    if (b.pageType === "dedication" && a.pageType !== "dedication") return 1;
     return a.pageNumber - b.pageNumber;
   });
 }
@@ -54,6 +51,7 @@ export default function RealBookReader({
   const [animKey, setAnimKey] = useState(0);
   const [animDir, setAnimDir] = useState<"next" | "prev" | null>(null);
   const [isMobile, setIsMobile] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const [fontSize, setFontSize] = useState<FontSize>("large");
   const [fontFamily, setFontFamily] = useState<FontFamily>("nunito");
   const [feedbackOpen, setFeedbackOpen] = useState(false);
@@ -66,66 +64,62 @@ export default function RealBookReader({
   const pages = sortPages(data.pages);
   const total = pages.length;
 
-  // Mobile detection
+  // Hydration guard — prevents SSR mismatch on isOpen
   useEffect(() => {
+    setMounted(true);
     const mq = window.matchMedia("(max-width: 767px)");
     setIsMobile(mq.matches);
     const h = (e: MediaQueryListEvent) => setIsMobile(e.matches);
     mq.addEventListener("change", h);
+
+    try {
+      const s = localStorage.getItem(LS_SIZE) as FontSize | null;
+      if (s && FONT_SIZES.includes(s)) setFontSize(s);
+      const f = localStorage.getItem(LS_FAMILY) as FontFamily | null;
+      if (f && FONT_FAMILIES.includes(f)) setFontFamily(f);
+    } catch { /* private mode */ }
+
     return () => mq.removeEventListener("change", h);
   }, []);
 
-  // Restore saved font preferences
-  useEffect(() => {
-    try {
-      const savedSize = localStorage.getItem(LS_FONT_SIZE_KEY) as FontSize | null;
-      if (savedSize && FONT_SIZES.includes(savedSize)) setFontSize(savedSize);
-      const savedFamily = localStorage.getItem(LS_FONT_FAMILY_KEY) as FontFamily | null;
-      if (savedFamily && FONT_FAMILIES.includes(savedFamily)) setFontFamily(savedFamily);
-    } catch { /* ignore */ }
-  }, []);
-
-  function handleFontSize(s: FontSize) {
-    setFontSize(s);
-    try { localStorage.setItem(LS_FONT_SIZE_KEY, s); } catch { /* ignore */ }
-  }
-
-  function handleFontFamily(f: FontFamily) {
-    setFontFamily(f);
-    try { localStorage.setItem(LS_FONT_FAMILY_KEY, f); } catch { /* ignore */ }
-  }
-
-  // Navigation
   const step = isMobile ? 1 : 2;
 
   const goNext = useCallback(() => {
-    const nextIdx = currentIdx + step;
-    if (nextIdx >= total) return;
+    if (currentIdx + step >= total) return;
     setAnimDir("next");
     setAnimKey(k => k + 1);
-    setCurrentIdx(nextIdx);
+    setCurrentIdx(i => Math.min(i + step, total - 1));
   }, [currentIdx, step, total]);
 
   const goPrev = useCallback(() => {
-    const prevIdx = currentIdx - step;
-    if (prevIdx < 0) return;
+    if (currentIdx === 0) return;
     setAnimDir("prev");
     setAnimKey(k => k + 1);
-    setCurrentIdx(Math.max(0, prevIdx));
+    setCurrentIdx(i => Math.max(0, i - step));
   }, [currentIdx, step]);
 
-  // Keyboard nav
+  // Keyboard
   useEffect(() => {
     if (!isOpen) return;
-    function onKey(e: KeyboardEvent) {
+    const fn = (e: KeyboardEvent) => {
       if (e.key === "ArrowRight") goNext();
       if (e.key === "ArrowLeft") goPrev();
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [isOpen, goNext, goPrev]);
+      if (e.key === "Escape" && backHref) window.location.href = backHref;
+    };
+    window.addEventListener("keydown", fn);
+    return () => window.removeEventListener("keydown", fn);
+  }, [isOpen, goNext, goPrev, backHref]);
 
-  // Touch nav
+  // Lock body scroll when reader is open
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => { document.body.style.overflow = ""; };
+  }, [isOpen]);
+
   function onTouchStart(e: React.TouchEvent) {
     touchStartX.current = e.touches[0].clientX;
   }
@@ -135,20 +129,24 @@ export default function RealBookReader({
     else if (delta > 48) goPrev();
   }
 
-  // Click zones on spread (left half = prev, right half = next)
+  // Click zones: left 30% → prev, right 30% → next (center 40% = no action)
   function onSpreadClick(e: React.MouseEvent<HTMLDivElement>) {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    if (x < rect.width * 0.35) goPrev();
-    else if (x > rect.width * 0.65) goNext();
+    const { left, width } = e.currentTarget.getBoundingClientRect();
+    const x = (e.clientX - left) / width;
+    if (x < 0.30) goPrev();
+    else if (x > 0.70) goNext();
   }
 
-  // Derived spread pages
-  const leftPage: BookReaderPage | null = isMobile ? null : (pages[currentIdx] ?? null);
-  const rightPage: BookReaderPage | null = isMobile ? null : (pages[currentIdx + 1] ?? null);
-  const mobilePage: BookReaderPage | null = isMobile ? (pages[currentIdx] ?? null) : null;
+  function saveFontSize(s: FontSize) {
+    setFontSize(s);
+    try { localStorage.setItem(LS_SIZE, s); } catch { /* ignore */ }
+  }
+  function saveFontFamily(f: FontFamily) {
+    setFontFamily(f);
+    try { localStorage.setItem(LS_FAMILY, f); } catch { /* ignore */ }
+  }
 
-  // Display page numbers (skip cover/dedication from count)
+  // Page labelling helpers
   const storyPages = pages.filter(p => p.pageType === "story");
   const totalStory = storyPages.length;
 
@@ -157,8 +155,36 @@ export default function RealBookReader({
     return storyPages.findIndex(p => p.pageNumber === page.pageNumber) + 1;
   }
 
-  const hasPrev = currentIdx > 0;
-  const hasNext = isMobile ? currentIdx < total - 1 : currentIdx + step < total;
+  function pageLabel(page: BookReaderPage | null): string | undefined {
+    if (!page) return undefined;
+    const n = storyNum(page);
+    if (n !== undefined) return `${n} of ${totalStory}`;
+    if (page.pageType === "cover") return "Cover";
+    if (page.pageType === "dedication") return "Dedication";
+    if (page.pageType === "certificate") return "Certificate";
+    return undefined;
+  }
+
+  // Spread counter text e.g. "Pages 2–3 of 10"
+  function spreadCounterText(): string {
+    if (isMobile) {
+      const p = pages[currentIdx];
+      if (!p) return "";
+      const n = storyNum(p);
+      if (n !== undefined) return `Page ${n} of ${totalStory}`;
+      if (p.pageType === "cover") return "Cover";
+      if (p.pageType === "dedication") return "Dedication";
+      return "Certificate";
+    }
+    const left = pages[currentIdx];
+    const right = pages[currentIdx + 1];
+    const ln = storyNum(left);
+    const rn = storyNum(right);
+    if (ln !== undefined && rn !== undefined) return `Pages ${ln}–${rn} of ${totalStory}`;
+    if (ln !== undefined) return `Page ${ln} of ${totalStory}`;
+    if (left?.pageType === "cover") return right ? "Cover & Page 1" : "Cover";
+    return "Reading…";
+  }
 
   // Actions
   async function handleApprove() {
@@ -170,11 +196,8 @@ export default function RealBookReader({
       const d = await res.json();
       if (!res.ok) throw new Error(d.error ?? "Approval failed");
       setDownloadUrl(d.downloadUrl);
-    } catch (e) {
-      alert(e instanceof Error ? e.message : "Error");
-    } finally {
-      setApproving(false);
-    }
+    } catch (e) { alert(e instanceof Error ? e.message : "Error"); }
+    finally { setApproving(false); }
   }
 
   async function handleRequestChanges() {
@@ -190,9 +213,7 @@ export default function RealBookReader({
       });
       setFeedbackOpen(false);
       setFeedbackText("");
-    } finally {
-      setSubmittingFeedback(false);
-    }
+    } finally { setSubmittingFeedback(false); }
   }
 
   async function handleDownload() {
@@ -204,7 +225,10 @@ export default function RealBookReader({
     if (d.url) window.open(d.url, "_blank");
   }
 
-  // ── Cover view ────────────────────────────────────────────────────────────
+  // Before mount, render nothing to avoid SSR flash
+  if (!mounted) return null;
+
+  // ── Cover ─────────────────────────────────────────────────────────────────
   if (!isOpen) {
     return (
       <BookCover
@@ -212,72 +236,119 @@ export default function RealBookReader({
         childName={data.childName}
         coverImageUrl={data.coverImageUrl ?? pages.find(p => p.pageType === "cover")?.imageUrl}
         onOpen={() => setIsOpen(true)}
+        backHref={backHref}
+        backLabel={backLabel}
       />
     );
   }
 
-  // ── Reader view ───────────────────────────────────────────────────────────
+  // ── Reader ────────────────────────────────────────────────────────────────
+  const leftPage = isMobile ? null : (pages[currentIdx] ?? null);
+  const rightPage = isMobile ? null : (pages[currentIdx + 1] ?? null);
+  const mobilePage = isMobile ? (pages[currentIdx] ?? null) : null;
+  const hasPrev = currentIdx > 0;
+  const hasNext = isMobile ? currentIdx < total - 1 : currentIdx + step < total;
+
   return (
     <div
-      className="flex flex-col min-h-screen bg-[#FFF8ED]"
+      className="fixed inset-0 z-[60] flex flex-col overflow-hidden"
+      style={{ background: "#FFF8ED" }}
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
     >
       <WonderHandHint />
 
-      {/* Toolbar */}
-      <ReaderToolbar
-        title={data.title}
-        childName={data.childName}
-        mode={data.mode}
-        fontSize={fontSize}
-        onFontSize={handleFontSize}
-        fontFamily={fontFamily}
-        onFontFamily={handleFontFamily}
-        backHref={backHref}
-        backLabel={backLabel}
-      />
-
-      {/* Sample mode notice */}
-      {data.mode === "sample" && (
-        <div className="bg-[#FFD166]/25 border-b border-[#FFD166]/50 text-center py-2 px-4">
-          <p className="text-xs text-[#24304A] font-medium">
-            📖 Sample preview — content is placeholder.{" "}
+      {/* ── Toolbar ───────────────────────────────────────────────────────── */}
+      <div
+        className="flex-shrink-0 flex items-center justify-between px-4 py-2.5 border-b"
+        style={{ background: "rgba(255,255,255,0.85)", backdropFilter: "blur(8px)", borderColor: "rgba(0,0,0,0.07)" }}
+      >
+        {/* Left: back */}
+        <div className="flex items-center gap-3 min-w-0 flex-1">
+          {backHref && (
             <a
-              href={data.templateSlug ? `/register?template=${data.templateSlug}` : "/register"}
-              className="text-[#6C63FF] font-bold hover:underline"
+              href={backHref}
+              className="text-sm font-semibold text-[#6C63FF] hover:opacity-70 transition-opacity whitespace-nowrap flex-shrink-0"
             >
-              Create your child's personalized version →
+              ← {backLabel ?? "Back"}
             </a>
-          </p>
+          )}
+          <span className="text-sm font-extrabold text-[#24304A] truncate hidden sm:block">
+            {data.title}
+          </span>
+          {data.childName && (
+            <span className="text-xs text-gray-400 hidden md:block">· {data.childName}</span>
+          )}
+        </div>
+
+        {/* Center: mode badge */}
+        <div className="flex-shrink-0 mx-3">
+          {data.mode === "sample" && (
+            <span className="text-xs font-bold bg-[#FFD166]/30 text-yellow-700 px-2.5 py-1 rounded-full">
+              Preview
+            </span>
+          )}
+          {data.mode === "review" && (
+            <span className="text-xs font-bold bg-purple-100 text-[#6C63FF] px-2.5 py-1 rounded-full">
+              Review
+            </span>
+          )}
+          {data.mode === "final" && (
+            <span className="text-xs font-bold bg-green-100 text-green-700 px-2.5 py-1 rounded-full">
+              Approved
+            </span>
+          )}
+        </div>
+
+        {/* Right: font controls */}
+        <div className="flex items-center gap-2 flex-shrink-0 flex-1 justify-end">
+          <FontFamilyControls value={fontFamily} onChange={saveFontFamily} />
+          <FontSizeControls fontSize={fontSize} onChange={saveFontSize} />
+        </div>
+      </div>
+
+      {/* ── Sample banner ─────────────────────────────────────────────────── */}
+      {data.mode === "sample" && (
+        <div
+          className="flex-shrink-0 text-center py-1.5 px-4 text-xs font-medium text-[#24304A]"
+          style={{ background: "rgba(255,209,102,0.25)", borderBottom: "1px solid rgba(255,209,102,0.5)" }}
+        >
+          📖 Sample preview —{" "}
+          <a
+            href={data.templateSlug ? `/register?template=${data.templateSlug}` : "/register"}
+            className="text-[#6C63FF] font-bold hover:underline"
+          >
+            Create your child's personalized version →
+          </a>
         </div>
       )}
 
-      {/* Book area */}
+      {/* ── Book area ─────────────────────────────────────────────────────── */}
       <div
-        className="flex-1 flex items-center justify-center p-4 md:p-6"
+        className="flex-1 flex items-center justify-center overflow-hidden"
         onClick={!isMobile ? onSpreadClick : undefined}
-        style={{ cursor: !isMobile ? "pointer" : "default" }}
+        style={{ padding: isMobile ? "8px" : "16px 24px 8px", cursor: !isMobile ? "pointer" : "default" }}
       >
         {isMobile ? (
-          // ── Mobile: single page ──────────────────────────────────────────
+          // Single page (mobile)
           <div
             key={animKey}
-            className={animDir === "next" ? "mobile-enter-next" : animDir === "prev" ? "mobile-enter-prev" : ""}
+            className={animDir === "next" ? "mob-next" : animDir === "prev" ? "mob-prev" : ""}
             style={{
               width: "100%",
-              maxWidth: 480,
-              height: "min(72vh, 620px)",
-              borderRadius: 16,
+              maxWidth: 460,
+              height: "100%",
+              maxHeight: 580,
+              borderRadius: 12,
               overflow: "hidden",
-              boxShadow: "0 8px 32px rgba(0,0,0,0.18)",
+              boxShadow: "0 8px 32px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.1)",
             }}
           >
             <style>{`
-              @keyframes mobileRight { from { transform: translateX(24px); opacity:0; } to { transform:translateX(0); opacity:1; } }
-              @keyframes mobileLeft  { from { transform: translateX(-24px); opacity:0; } to { transform:translateX(0); opacity:1; } }
-              .mobile-enter-next { animation: mobileRight 0.26s ease-out; }
-              .mobile-enter-prev { animation: mobileLeft  0.26s ease-out; }
+              @keyframes mobR { from{transform:translateX(20px);opacity:0} to{transform:translateX(0);opacity:1} }
+              @keyframes mobL { from{transform:translateX(-20px);opacity:0} to{transform:translateX(0);opacity:1} }
+              .mob-next{animation:mobR 0.22s cubic-bezier(.22,1,.36,1)}
+              .mob-prev{animation:mobL 0.22s cubic-bezier(.22,1,.36,1)}
             `}</style>
             {mobilePage && (
               <BookPage
@@ -286,50 +357,82 @@ export default function RealBookReader({
                 fontFamily={fontFamily}
                 bookId={bookId}
                 side="single"
-                displayNumber={storyNum(mobilePage)}
-                totalPages={totalStory}
+                pageLabel={pageLabel(mobilePage)}
               />
             )}
           </div>
         ) : (
-          // ── Desktop: two-page spread ─────────────────────────────────────
+          // Two-page spread (desktop)
           <BookSpread
             leftPage={leftPage}
             rightPage={rightPage}
             fontSize={fontSize}
             fontFamily={fontFamily}
             bookId={bookId}
-            displayNumbers={[storyNum(leftPage), storyNum(rightPage)]}
-            totalStoryPages={totalStory}
+            leftLabel={pageLabel(leftPage)}
+            rightLabel={pageLabel(rightPage)}
             animKey={animKey}
             animDirection={animDir}
           />
         )}
       </div>
 
-      {/* Nav bar */}
-      <div className="bg-white border-t border-gray-100 px-4 py-3">
-        <div className="max-w-2xl mx-auto flex items-center justify-between gap-4">
-          <PageTurnControls
-            onPrev={goPrev}
-            onNext={goNext}
-            hasPrev={hasPrev}
-            hasNext={hasNext}
-          />
-          <ReaderProgress
-            current={isMobile ? currentIdx : Math.floor(currentIdx / 2)}
-            total={isMobile ? total : Math.ceil(total / 2)}
-            onChange={(i) => {
-              const newIdx = isMobile ? i : i * 2;
-              setAnimDir(newIdx > currentIdx ? "next" : "prev");
-              setAnimKey(k => k + 1);
-              setCurrentIdx(newIdx);
+      {/* ── Navigation bar ────────────────────────────────────────────────── */}
+      <div
+        className="flex-shrink-0 border-t"
+        style={{ background: "rgba(255,255,255,0.9)", borderColor: "rgba(0,0,0,0.07)" }}
+      >
+        <div className="max-w-3xl mx-auto px-4 py-2.5 flex items-center justify-between gap-3">
+          {/* Prev */}
+          <button
+            onClick={goPrev}
+            disabled={!hasPrev}
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border-2 text-sm font-bold transition-all active:scale-95"
+            style={{
+              borderColor: hasPrev ? "#6C63FF" : "#E5E7EB",
+              color: hasPrev ? "#6C63FF" : "#9CA3AF",
+              opacity: hasPrev ? 1 : 0.4,
+              cursor: hasPrev ? "pointer" : "not-allowed",
             }}
-          />
+          >
+            ← Prev
+          </button>
+
+          {/* Counter + dots */}
+          <div className="flex flex-col items-center gap-1 flex-1 min-w-0">
+            <span className="text-xs font-semibold text-gray-500 whitespace-nowrap">
+              {spreadCounterText()}
+            </span>
+            <ReaderProgress
+              current={isMobile ? currentIdx : Math.floor(currentIdx / 2)}
+              total={isMobile ? total : Math.ceil(total / 2)}
+              onChange={(i) => {
+                const newIdx = isMobile ? i : i * 2;
+                setAnimDir(newIdx > currentIdx ? "next" : "prev");
+                setAnimKey(k => k + 1);
+                setCurrentIdx(newIdx);
+              }}
+            />
+          </div>
+
+          {/* Next */}
+          <button
+            onClick={goNext}
+            disabled={!hasNext}
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border-2 text-sm font-bold transition-all active:scale-95"
+            style={{
+              borderColor: hasNext ? "#6C63FF" : "#E5E7EB",
+              color: hasNext ? "#6C63FF" : "#9CA3AF",
+              opacity: hasNext ? 1 : 0.4,
+              cursor: hasNext ? "pointer" : "not-allowed",
+            }}
+          >
+            Next →
+          </button>
         </div>
       </div>
 
-      {/* Mode action bar */}
+      {/* ── Mode action bar ───────────────────────────────────────────────── */}
       <ActionBar
         mode={data.mode}
         templateSlug={data.templateSlug}
@@ -342,13 +445,13 @@ export default function RealBookReader({
         onReadAgain={() => { setCurrentIdx(0); setAnimDir(null); }}
       />
 
-      {/* Feedback modal */}
+      {/* ── Feedback modal ────────────────────────────────────────────────── */}
       {feedbackOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[70] p-4">
           <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl">
             <h3 className="font-extrabold text-[#24304A] text-lg mb-2">What would you like changed?</h3>
             <p className="text-sm text-gray-500 mb-4">
-              Describe what you&apos;d like updated. We&apos;ll work on an improved version.
+              Describe what you&apos;d like updated — we&apos;ll work on an improved version.
             </p>
             <textarea
               value={feedbackText}
@@ -363,7 +466,7 @@ export default function RealBookReader({
                 disabled={submittingFeedback || !feedbackText.trim()}
                 className="flex-1 bg-[#6C63FF] hover:bg-[#5A52E0] disabled:opacity-50 text-white font-bold py-2.5 rounded-xl transition-colors"
               >
-                {submittingFeedback ? "Submitting..." : "Submit Feedback"}
+                {submittingFeedback ? "Submitting…" : "Submit Feedback"}
               </button>
               <button
                 onClick={() => setFeedbackOpen(false)}
@@ -379,9 +482,9 @@ export default function RealBookReader({
   );
 }
 
-// ── Action bar by mode ──────────────────────────────────────────────────────
-interface ActionBarProps {
-  mode: ReaderMode;
+// ── Mode action bars ──────────────────────────────────────────────────────────
+type ActionBarProps = {
+  mode: string;
   templateSlug?: string;
   approving: boolean;
   downloadUrl: string | null;
@@ -390,37 +493,35 @@ interface ActionBarProps {
   onDownload: () => void;
   onShare?: () => void;
   onReadAgain: () => void;
-}
+};
 
 function ActionBar({
-  mode,
-  templateSlug,
-  approving,
-  downloadUrl,
-  onApprove,
-  onRequestChanges,
-  onDownload,
-  onShare,
-  onReadAgain,
+  mode, templateSlug, approving, downloadUrl,
+  onApprove, onRequestChanges, onDownload, onShare, onReadAgain,
 }: ActionBarProps) {
+  const baseStyle: React.CSSProperties = {
+    background: "rgba(255,248,237,0.95)",
+    borderTop: "1px solid rgba(108,99,255,0.12)",
+    padding: "10px 16px",
+    flexShrink: 0,
+  };
+
   if (mode === "sample") {
     return (
-      <div className="bg-[#FFF8ED] border-t border-purple-100 px-4 py-4">
-        <div className="max-w-2xl mx-auto flex flex-col sm:flex-row items-center gap-3">
-          <div className="flex-1 text-center sm:text-left">
-            <p className="font-bold text-[#24304A] text-sm">Love this adventure?</p>
-            <p className="text-xs text-gray-500">Personalize it with your child's name, age, and photo. From $14.99.</p>
+      <div style={baseStyle}>
+        <div className="max-w-3xl mx-auto flex flex-col sm:flex-row items-center gap-2.5">
+          <div className="flex-1 text-center sm:text-left min-w-0">
+            <p className="text-sm font-bold text-[#24304A]">Love this adventure?</p>
+            <p className="text-xs text-gray-500">Personalized with your child's name, photo & age. From $14.99.</p>
           </div>
-          <div className="flex gap-2">
-            <a
-              href="/themes"
-              className="px-4 py-2.5 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 font-semibold text-sm transition-colors"
-            >
+          <div className="flex gap-2 flex-shrink-0">
+            <a href="/themes" className="px-4 py-2 rounded-xl border border-gray-200 text-gray-600 hover:bg-white font-semibold text-sm transition-colors">
               ← Browse
             </a>
             <a
               href={templateSlug ? `/register?template=${templateSlug}` : "/register"}
-              className="bg-[#6C63FF] hover:bg-[#5A52E0] text-white font-bold px-5 py-2.5 rounded-xl text-sm transition-colors"
+              className="px-5 py-2 rounded-xl text-white font-bold text-sm transition-colors"
+              style={{ background: "#6C63FF" }}
             >
               ✨ Create This Book
             </a>
@@ -432,24 +533,25 @@ function ActionBar({
 
   if (mode === "review") {
     return (
-      <div className="bg-[#FFF8ED] border-t border-purple-100 px-4 py-4">
-        <div className="max-w-2xl mx-auto flex flex-col sm:flex-row items-center gap-3">
+      <div style={baseStyle}>
+        <div className="max-w-3xl mx-auto flex flex-col sm:flex-row items-center gap-2.5">
           <p className="flex-1 text-sm text-gray-500 text-center sm:text-left">
-            Happy with the story? Approve to generate your final PDF.
+            Happy with the story? Approve to generate your PDF download.
           </p>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-shrink-0">
             <button
               onClick={onRequestChanges}
-              className="px-4 py-2.5 rounded-xl border-2 border-gray-200 hover:border-gray-300 text-gray-600 font-bold text-sm transition-colors"
+              className="px-4 py-2 rounded-xl border-2 border-gray-200 hover:border-gray-300 text-gray-600 font-bold text-sm transition-colors"
             >
               ✏️ Request Changes
             </button>
             <button
               onClick={onApprove}
               disabled={approving}
-              className="bg-[#6C63FF] hover:bg-[#5A52E0] disabled:opacity-50 text-white font-bold px-5 py-2.5 rounded-xl text-sm transition-colors"
+              className="px-5 py-2 rounded-xl text-white font-bold text-sm transition-colors disabled:opacity-50"
+              style={{ background: "#6C63FF" }}
             >
-              {approving ? "⏳ Generating..." : "✅ Approve Book"}
+              {approving ? "⏳ Generating…" : "✅ Approve Book"}
             </button>
           </div>
         </div>
@@ -459,29 +561,28 @@ function ActionBar({
 
   // final
   return (
-    <div className="bg-[#FFF8ED] border-t border-purple-100 px-4 py-4">
-      <div className="max-w-2xl mx-auto flex flex-col sm:flex-row items-center gap-3">
-        <p className="flex-1 text-sm text-gray-500 text-center sm:text-left">
-          🎉 Your book is approved and ready!
-        </p>
-        <div className="flex gap-2 flex-wrap justify-center">
+    <div style={baseStyle}>
+      <div className="max-w-3xl mx-auto flex flex-col sm:flex-row items-center gap-2.5">
+        <p className="flex-1 text-sm text-gray-500 text-center sm:text-left">🎉 Your book is ready!</p>
+        <div className="flex gap-2 flex-wrap justify-center flex-shrink-0">
           <button
             onClick={onReadAgain}
-            className="px-4 py-2.5 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 font-semibold text-sm transition-colors"
+            className="px-4 py-2 rounded-xl border border-gray-200 text-gray-600 hover:bg-white font-semibold text-sm transition-colors"
           >
             📖 Read Again
           </button>
           {onShare && (
             <button
               onClick={onShare}
-              className="px-4 py-2.5 rounded-xl border border-gray-200 text-gray-600 hover:bg-gray-50 font-semibold text-sm transition-colors"
+              className="px-4 py-2 rounded-xl border border-gray-200 text-gray-600 hover:bg-white font-semibold text-sm transition-colors"
             >
               📤 Share
             </button>
           )}
           <button
             onClick={onDownload}
-            className="bg-[#06D6A0] hover:bg-emerald-500 text-white font-bold px-5 py-2.5 rounded-xl text-sm transition-colors"
+            className="px-5 py-2 rounded-xl text-white font-bold text-sm transition-colors"
+            style={{ background: "#06D6A0" }}
           >
             📥 Download PDF
           </button>

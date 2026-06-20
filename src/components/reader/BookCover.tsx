@@ -1,113 +1,155 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
+import Link from "next/link";
 
 interface BookCoverProps {
   title: string;
   childName?: string;
   coverImageUrl?: string;
   onOpen: () => void;
+  backHref?: string;
+  backLabel?: string;
 }
 
-export default function BookCover({ title, childName, coverImageUrl, onOpen }: BookCoverProps) {
-  const placeholder = `https://placehold.co/480x640/6C63FF/FFFFFF?text=${encodeURIComponent(title)}`;
+export default function BookCover({
+  title,
+  childName,
+  coverImageUrl,
+  onOpen,
+  backHref,
+  backLabel,
+}: BookCoverProps) {
+  const [hovered, setHovered] = useState(false);
+  const placeholder = `https://placehold.co/600x800/6C63FF/FFFFFF?text=${encodeURIComponent(title)}`;
   const src = coverImageUrl || placeholder;
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-[#FFF8ED] via-purple-50 to-[#FFF8ED] p-8 gap-8">
-      {/* Brand */}
-      <div className="flex items-center gap-2 text-[#6C63FF]">
-        <span className="text-2xl">📖</span>
-        <span className="font-extrabold text-lg">WonderKid Stories</span>
+    <div className="fixed inset-0 z-[60] flex flex-col bg-gradient-to-br from-[#FFF8ED] via-[#f5f0ff] to-[#FFF8ED] overflow-hidden">
+      {/* Minimal top bar */}
+      <div className="flex items-center justify-between px-5 py-3 bg-white/60 backdrop-blur-sm border-b border-white/40">
+        {backHref ? (
+          <Link href={backHref} className="text-sm text-[#6C63FF] font-semibold hover:opacity-75 transition-opacity">
+            ← {backLabel ?? "Back"}
+          </Link>
+        ) : <div />}
+        <div className="flex items-center gap-1.5 text-[#6C63FF]">
+          <span className="text-lg">📖</span>
+          <span className="font-extrabold text-sm hidden sm:inline">WonderKid Stories</span>
+        </div>
+        <div className="w-20" />
       </div>
 
-      {/* Book */}
-      <div
-        className="relative cursor-pointer group"
-        onClick={onOpen}
-        style={{
-          filter: "drop-shadow(0 24px 40px rgba(108,99,255,0.35))",
-          transform: "perspective(1200px) rotateY(-8deg)",
-          transition: "transform 0.3s ease",
-        }}
-        onMouseEnter={(e) => {
-          (e.currentTarget as HTMLElement).style.transform =
-            "perspective(1200px) rotateY(-4deg) translateY(-4px)";
-        }}
-        onMouseLeave={(e) => {
-          (e.currentTarget as HTMLElement).style.transform =
-            "perspective(1200px) rotateY(-8deg)";
-        }}
-      >
-        {/* Spine */}
-        <div
-          className="absolute left-0 top-0 bottom-0 rounded-l-sm"
-          style={{
-            width: 20,
-            background: "linear-gradient(to right, #4A42D0, #5A52E0)",
-            transform: "translateX(-18px) skewY(-0.5deg)",
-            transformOrigin: "top right",
-            boxShadow: "inset -2px 0 6px rgba(0,0,0,0.3)",
-          }}
-        />
+      {/* Main content */}
+      <div className="flex-1 flex flex-col items-center justify-center px-6 py-4 gap-6">
+        {/* Subtitle */}
+        <p className="text-[#6C63FF] font-bold text-sm tracking-wide uppercase opacity-70">
+          {childName ? `A Story for ${childName}` : "Your Personalized Storybook"}
+        </p>
 
-        {/* Cover face */}
+        {/* 3D Book */}
         <div
-          className="relative overflow-hidden rounded-r-lg"
+          className="relative cursor-pointer"
+          onClick={onOpen}
+          onMouseEnter={() => setHovered(true)}
+          onMouseLeave={() => setHovered(false)}
           style={{
-            width: "min(280px, 68vw)",
-            height: "min(380px, 88vw)",
-            maxWidth: 320,
-            maxHeight: 430,
-            boxShadow: "inset -3px 0 8px rgba(0,0,0,0.15)",
+            perspective: "1200px",
+            transition: "transform 0.05s",
           }}
         >
-          <Image
-            src={src}
-            alt={title}
-            fill
-            className="object-cover"
-            unoptimized
-            priority
-          />
-          {/* Overlay gradient */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-
-          {/* Title on cover */}
-          <div className="absolute bottom-0 left-0 right-0 p-5">
-            <h1 className="font-extrabold text-white text-xl leading-tight drop-shadow-lg">
-              {title}
-            </h1>
-            {childName && (
-              <p className="text-white/80 text-sm mt-1 font-medium">
-                A story for {childName}
-              </p>
-            )}
-          </div>
-
-          {/* Sheen */}
           <div
-            className="absolute inset-0 pointer-events-none"
             style={{
-              background:
-                "linear-gradient(135deg, rgba(255,255,255,0.12) 0%, transparent 50%, rgba(0,0,0,0.08) 100%)",
+              transform: hovered
+                ? "rotateY(-5deg) translateY(-6px)"
+                : "rotateY(-12deg)",
+              transformStyle: "preserve-3d",
+              transition: "transform 0.35s cubic-bezier(.34,1.56,.64,1)",
+              filter: hovered
+                ? "drop-shadow(0 32px 48px rgba(108,99,255,0.5))"
+                : "drop-shadow(0 20px 32px rgba(108,99,255,0.35))",
             }}
-          />
+          >
+            {/* Spine */}
+            <div
+              style={{
+                position: "absolute",
+                left: -22,
+                top: 0,
+                bottom: 0,
+                width: 22,
+                background: "linear-gradient(to right, #3D35C0, #5A52E0, #4A42D0)",
+                borderRadius: "4px 0 0 4px",
+                boxShadow: "inset -3px 0 8px rgba(0,0,0,0.35)",
+                transformOrigin: "right center",
+                transform: "rotateY(90deg) translateZ(-11px)",
+              }}
+            />
+
+            {/* Cover face */}
+            <div
+              className="relative overflow-hidden"
+              style={{
+                width: "min(260px, 62vw)",
+                height: "min(360px, 84vw)",
+                maxWidth: 300,
+                maxHeight: 420,
+                borderRadius: "0 8px 8px 0",
+                boxShadow: "inset -4px 0 12px rgba(0,0,0,0.18), 4px 0 0 #3D35C0",
+              }}
+            >
+              <Image
+                src={src}
+                alt={title}
+                fill
+                className="object-cover"
+                unoptimized
+                priority
+              />
+              {/* Gradient overlay */}
+              <div
+                className="absolute inset-0"
+                style={{
+                  background: "linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.65) 100%)",
+                }}
+              />
+              {/* Title */}
+              <div className="absolute bottom-0 left-0 right-0 p-4">
+                <h1 className="font-extrabold text-white leading-tight drop-shadow-lg text-lg">
+                  {title}
+                </h1>
+                {childName && (
+                  <p className="text-white/80 text-xs mt-1 font-semibold">
+                    A story for {childName}
+                  </p>
+                )}
+              </div>
+              {/* Sheen */}
+              <div
+                className="absolute inset-0 pointer-events-none"
+                style={{
+                  background:
+                    "linear-gradient(135deg, rgba(255,255,255,0.15) 0%, transparent 45%, rgba(0,0,0,0.06) 100%)",
+                }}
+              />
+            </div>
+          </div>
         </div>
+
+        {/* Open button */}
+        <button
+          onClick={onOpen}
+          className="bg-[#6C63FF] hover:bg-[#5A52E0] text-white font-extrabold px-10 py-4 rounded-2xl text-lg transition-all active:scale-95 shadow-xl shadow-purple-200/60 flex items-center gap-2.5 mt-2"
+        >
+          <span className="text-xl">📖</span>
+          Open Book
+        </button>
+
+        <p className="text-gray-400 text-xs text-center">
+          Use ← → keys or swipe to turn pages
+        </p>
       </div>
-
-      {/* Subtitle */}
-      <p className="text-gray-400 text-sm text-center max-w-xs">
-        {childName ? `${childName}'s personalized adventure is ready to read!` : "Tap the cover to begin reading"}
-      </p>
-
-      {/* Open button */}
-      <button
-        onClick={onOpen}
-        className="bg-[#6C63FF] hover:bg-[#5A52E0] text-white font-extrabold px-8 py-4 rounded-2xl text-lg transition-all active:scale-95 shadow-lg shadow-purple-200 flex items-center gap-2"
-      >
-        📖 Open Book
-      </button>
     </div>
   );
 }
