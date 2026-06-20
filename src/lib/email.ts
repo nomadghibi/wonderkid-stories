@@ -1,7 +1,11 @@
 import { Resend } from "resend";
 import { siteConfig } from "@/config/site";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+function getResend(): Resend | null {
+  if (!process.env.RESEND_API_KEY) return null;
+  return new Resend(process.env.RESEND_API_KEY);
+}
+
 const FROM = process.env.EMAIL_FROM ?? `WonderKid Stories <noreply@wonderkidstories.com>`;
 
 // ─── Book draft ready ───────────────────────────────────────────
@@ -12,6 +16,9 @@ export async function sendDraftReadyEmail(opts: {
   bookId: string;
   parentName?: string;
 }) {
+  const resend = getResend();
+  if (!resend) return;
+
   const url = `${siteConfig.url}/dashboard/books/${opts.bookId}/reader`;
 
   await resend.emails.send({
@@ -59,6 +66,9 @@ export async function sendPDFReadyEmail(opts: {
   bookId: string;
   parentName?: string;
 }) {
+  const resend = getResend();
+  if (!resend) return;
+
   const url = `${siteConfig.url}/dashboard/books/${opts.bookId}`;
 
   await resend.emails.send({
@@ -102,7 +112,8 @@ export async function sendAdminFailureAlert(opts: {
   errorMessage: string;
   childName?: string;
 }) {
-  if (!process.env.ADMIN_EMAIL) return;
+  const resend = getResend();
+  if (!resend || !process.env.ADMIN_EMAIL) return;
 
   await resend.emails.send({
     from: FROM,
