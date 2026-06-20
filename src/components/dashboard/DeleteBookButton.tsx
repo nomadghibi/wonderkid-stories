@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 
 interface DeleteBookButtonProps {
   bookId: string;
@@ -14,7 +13,6 @@ export default function DeleteBookButton({
   redirectTo = "/dashboard/books",
   variant = "full",
 }: DeleteBookButtonProps) {
-  const router = useRouter();
   const [confirming, setConfirming] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -26,8 +24,7 @@ export default function DeleteBookButton({
       const res = await fetch(`/api/books/${bookId}`, { method: "DELETE" });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error ?? `Delete failed (${res.status})`);
-      router.push(redirectTo);
-      router.refresh();
+      window.location.href = redirectTo;
     } catch (e) {
       setError(e instanceof Error ? e.message : "Delete failed");
       setLoading(false);
