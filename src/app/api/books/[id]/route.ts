@@ -43,6 +43,9 @@ export async function DELETE(_req: Request, { params }: Params) {
     );
   }
 
+  // Nullify orders FK so payment history is preserved
+  await supabase.from("orders").update({ book_id: null }).eq("book_id", id);
+
   const { error } = await supabase.from("books").delete().eq("id", id).eq("user_id", user.id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
