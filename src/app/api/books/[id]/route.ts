@@ -20,6 +20,35 @@ export async function GET(_req: Request, { params }: Params) {
   return NextResponse.json(data);
 }
 
+export async function DELETE(_req: Request, { params }: Params) {
+  const { id } = await params;
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  // Only allow deleting failed or draft books
+  const { data: book } = await supabase
+    .from("books")
+    .select("id, status")
+    .eq("id", id)
+    .eq("user_id", user.id)
+    .single();
+
+  if (!book) return NextResponse.json({ error: "Not found" }, { status: 404 });
+
+  if (!["failed", "draft", "cancelled"].includes(book.status)) {
+    return NextResponse.json(
+      { error: "Only failed or draft books can be deleted" },
+      { status: 400 }
+    );
+  }
+
+  const { error } = await supabase.from("books").delete().eq("id", id).eq("user_id", user.id);
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+  return NextResponse.json({ success: true });
+}
+
 export async function PATCH(request: Request, { params }: Params) {
   const { id } = await params;
   const supabase = await createClient();

@@ -2,8 +2,10 @@ import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import AutoRefresh from "@/components/dashboard/AutoRefresh";
+import RetryBookButton from "@/components/dashboard/RetryBookButton";
+import DeleteBookButton from "@/components/dashboard/DeleteBookButton";
 
-type Params = { params: Promise<{ id: string }> };
+type Params = { params: Promise<{ id: string }>; searchParams: Promise<{ payment?: string }> };
 
 const STATUS_INFO: Record<string, { label: string; color: string; desc: string }> = {
   draft: { label: "Draft", color: "bg-gray-100 text-gray-600", desc: "Book created but not yet generated." },
@@ -19,8 +21,9 @@ const STATUS_INFO: Record<string, { label: string; color: string; desc: string }
   failed: { label: "Generation Failed", color: "bg-red-100 text-red-700", desc: "Something went wrong. Contact support or retry." },
 };
 
-export default async function BookDetailPage({ params }: Params) {
+export default async function BookDetailPage({ params, searchParams }: Params) {
   const { id: bookId } = await params;
+  const { payment } = await searchParams;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
@@ -52,6 +55,26 @@ export default async function BookDetailPage({ params }: Params) {
         </div>
         <span className={`text-sm font-semibold px-3 py-1.5 rounded-full ${statusInfo.color}`}>{statusInfo.label}</span>
       </div>
+
+      {payment === "success" && (
+        <div className="bg-green-50 border border-green-200 rounded-xl px-5 py-4 flex items-center gap-3">
+          <span className="text-2xl">🎉</span>
+          <div>
+            <p className="font-bold text-green-800">Payment received!</p>
+            <p className="text-sm text-green-700">Your book is queued for generation. This takes 1–2 minutes — this page will update automatically.</p>
+          </div>
+        </div>
+      )}
+
+      {payment === "cancelled" && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-xl px-5 py-4 flex items-center gap-3">
+          <span className="text-2xl">💳</span>
+          <div>
+            <p className="font-bold text-yellow-800">Payment cancelled</p>
+            <p className="text-sm text-yellow-700">No charge was made. You can try again from your books list.</p>
+          </div>
+        </div>
+      )}
 
       <AutoRefresh status={book.status} />
 
@@ -96,6 +119,12 @@ export default async function BookDetailPage({ params }: Params) {
             >
               📥 Download PDF
             </a>
+          )}
+          {book.status === "failed" && (
+            <div className="flex items-center gap-4 flex-wrap">
+              <RetryBookButton bookId={bookId} />
+              <DeleteBookButton bookId={bookId} />
+            </div>
           )}
           {book.status === "draft" && (
             <Link

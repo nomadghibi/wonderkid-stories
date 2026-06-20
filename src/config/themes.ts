@@ -40,4 +40,7 @@ export const THEME_EMOJIS: Record<string, string> = {
   "baseball-hero": "⚾",
   "magical-forest": "🌲",
   "space-explorer": "🚀",
+  "underwater-explorer": "🐠",
+  "superhero-academy": "🦸",
+  "dinosaur-discovery": "🦕",
 };

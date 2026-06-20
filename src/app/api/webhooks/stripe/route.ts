@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe";
 import { createServiceClient } from "@/lib/supabase/server";
+import { inngest } from "@/inngest/client";
 import { logAudit } from "@/lib/audit";
 import type Stripe from "stripe";
 
@@ -56,6 +57,9 @@ export async function POST(request: Request) {
       stripe_session_id: session.id,
       amount: session.amount_total,
     });
+
+    // Trigger async generation via Inngest
+    await inngest.send({ name: "book/generate", data: { bookId: book_id, userId: user_id } });
   }
 
   if (event.type === "payment_intent.payment_failed") {

@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
+import DeleteBookButton from "@/components/dashboard/DeleteBookButton";
 
 const STATUS_LABELS: Record<string, { label: string; color: string }> = {
   draft: { label: "Draft", color: "bg-gray-100 text-gray-600" },
@@ -105,6 +106,9 @@ export default async function BooksPage() {
                         <Link href={`/dashboard/books/${book.id}`} className="text-xs text-gray-500 hover:text-gray-700 font-medium">
                           View
                         </Link>
+                        {["failed", "draft"].includes(book.status) && (
+                          <DeleteBookButton bookId={book.id} variant="icon" />
+                        )}
                       </div>
                     </td>
                   </tr>

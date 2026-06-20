@@ -1,11 +1,17 @@
 import { inngest } from "@/inngest/client";
 import { createServiceClient } from "@/lib/supabase/server";
+
+// Template-first path
+import { personalizeTemplate } from "@/services/template-personalizer";
+
+// Classic theme-based path
 import { planStory } from "@/agents/story-planner";
 import { reviewSafety } from "@/agents/safety-reviewer";
-import { generateImage } from "@/agents/image-generator";
 import { buildIllustrationPrompt } from "@/agents/illustration-prompt";
 import { assembleBook } from "@/agents/book-assembler";
 import { checkBookQuality } from "@/agents/quality-agent";
+
+import { generateImage } from "@/agents/image-generator";
 import { sendDraftReadyEmail, sendAdminFailureAlert } from "@/lib/email";
 import { BUCKETS } from "@/lib/storage";
 import type { ChildProfile } from "@/types/child";
@@ -59,14 +65,119 @@ export const generateBookFunction = inngest.createFunction(
       await supabase.from("books").update({ status: "story_generating" }).eq("id", bookId);
     });
 
-    // Generate story plan
+    const child = book.child_profiles as ChildProfile;
+
+    // ── Template-first path ────────────────────────────────────────────────
+    if (book.template_id) {
+      const { title, pages } = await step.run("personalize-template", async () => {
+        return personalizeTemplate({
+          templateId: book.template_id,
+          child,
+          dedication: book.dedication ?? undefined,
+          supabase,
+        });
+      });
+
+      await step.run("set-images-generating", async () => {
+        await supabase.from("books").update({ status: "images_generating" }).eq("id", bookId);
+        if (job) {
+          await supabase
+            .from("generation_jobs")
+            .update({ current_step: "image_generation" })
+            .eq("id", job.id);
+        }
+      });
+
+      const pageRows = await step.run("generate-images", async () => {
+        const rows: Record<string, unknown>[] = [];
+
+        for (const page of pages) {
+          let imageUrl: string | null = null;
+
+          if (page.image_prompt && page.page_type !== "certificate" && page.page_type !== "dedication") {
+            const result = await generateImage(page.image_prompt);
+            if (result.buffer) {
+              const storagePath = `users/${userId}/books/${bookId}/pages/page-${page.page_number}.png`;
+              const { error: uploadErr } = await supabase.storage
+                .from(BUCKETS.bookAssets)
+                .upload(storagePath, result.buffer, { contentType: "image/png", upsert: true });
+              imageUrl = uploadErr ? result.imageUrl : storagePath;
+            } else if (result.imageUrl) {
+              imageUrl = result.imageUrl;
+            }
+          }
+
+          rows.push({
+            book_id: bookId,
+            template_page_id: page.template_page_id,
+            page_number: page.page_number,
+            page_type: page.page_type,
+            title: page.title,
+            text_content: page.text_content,
+            image_prompt: page.image_prompt || null,
+            image_url: imageUrl,
+            status: "ready",
+          });
+        }
+
+        if (book.dedication) {
+          rows.push({
+            book_id: bookId,
+            template_page_id: null,
+            page_number: -1,
+            page_type: "dedication",
+            title: "A Special Message",
+            text_content: book.dedication,
+            image_url: null,
+            status: "ready",
+          });
+        }
+
+        return rows;
+      });
+
+      await step.run("save-pages", async () => {
+        await supabase.from("book_pages").delete().eq("book_id", bookId);
+        await supabase.from("book_pages").insert(pageRows);
+      });
+
+      await step.run("finalize", async () => {
+        await supabase
+          .from("books")
+          .update({ title, status: "reader_ready", review_status: "not_ready" })
+          .eq("id", bookId);
+        if (job) {
+          await supabase
+            .from("generation_jobs")
+            .update({ status: "completed", current_step: "done", completed_at: new Date().toISOString() })
+            .eq("id", job.id);
+        }
+      });
+
+      await step.run("send-email", async () => {
+        const { data: userProfile } = await supabase
+          .from("users").select("email, full_name").eq("id", userId).single();
+        if (userProfile?.email) {
+          await sendDraftReadyEmail({
+            to: userProfile.email,
+            childName: child.name,
+            bookTitle: title,
+            bookId,
+            parentName: userProfile.full_name ?? undefined,
+          });
+        }
+      });
+
+      return { bookId, title, status: "reader_ready" };
+    }
+
+    // ── Classic theme-based path ───────────────────────────────────────────
+    const theme = book.story_themes as StoryTheme;
+
     const plan = await step.run("generate-story", async () => {
-      const child = book.child_profiles as ChildProfile;
-      const theme = book.story_themes as StoryTheme;
       return planStory({ child, theme, dedication: book.dedication ?? undefined });
     });
 
-    // Safety check
     await step.run("safety-check", async () => {
       const result = await reviewSafety(plan);
       if (!result.passed) {
@@ -74,12 +185,8 @@ export const generateBookFunction = inngest.createFunction(
       }
     });
 
-    // Generate images
     await step.run("set-images-generating", async () => {
-      await supabase
-        .from("books")
-        .update({ status: "images_generating" })
-        .eq("id", bookId);
+      await supabase.from("books").update({ status: "images_generating" }).eq("id", bookId);
       if (job) {
         await supabase
           .from("generation_jobs")
@@ -89,12 +196,10 @@ export const generateBookFunction = inngest.createFunction(
     });
 
     const imageUrls = await step.run("generate-images", async () => {
-      const child = book.child_profiles as ChildProfile;
       const urls: Record<number, string> = {};
       for (const page of plan.pages) {
         const prompt = buildIllustrationPrompt(page, child);
         const result = await generateImage(prompt);
-
         if (result.buffer) {
           const storagePath = `users/${userId}/books/${bookId}/pages/page-${page.page_number}.png`;
           const { error: uploadErr } = await supabase.storage
@@ -108,7 +213,6 @@ export const generateBookFunction = inngest.createFunction(
       return urls;
     });
 
-    // Assemble and save pages
     await step.run("save-pages", async () => {
       const pageInserts = assembleBook(plan, bookId, imageUrls);
       const allPages = [
@@ -138,18 +242,12 @@ export const generateBookFunction = inngest.createFunction(
       await supabase.from("book_pages").insert(allPages);
     });
 
-    // Quality check + mark ready
     await step.run("finalize", async () => {
       const { data: savedPages } = await supabase
-        .from("book_pages")
-        .select("*")
-        .eq("book_id", bookId)
-        .order("page_number");
+        .from("book_pages").select("*").eq("book_id", bookId).order("page_number");
 
       const quality = checkBookQuality(savedPages ?? []);
-      if (!quality.passed) {
-        console.warn("[inngest] Quality issues:", quality.issues);
-      }
+      if (!quality.passed) console.warn("[inngest] Quality issues:", quality.issues);
 
       await supabase
         .from("books")
@@ -164,16 +262,10 @@ export const generateBookFunction = inngest.createFunction(
       }
     });
 
-    // Send email
     await step.run("send-email", async () => {
       const { data: userProfile } = await supabase
-        .from("users")
-        .select("email, full_name")
-        .eq("id", userId)
-        .single();
-
+        .from("users").select("email, full_name").eq("id", userId).single();
       if (userProfile?.email) {
-        const child = book.child_profiles as ChildProfile;
         await sendDraftReadyEmail({
           to: userProfile.email,
           childName: child.name,
@@ -188,7 +280,7 @@ export const generateBookFunction = inngest.createFunction(
   }
 );
 
-// Export failure handler
+// ── Failure handler ────────────────────────────────────────────────────────
 export const generateBookFailureFunction = inngest.createFunction(
   {
     id: "generate-book-failure",
