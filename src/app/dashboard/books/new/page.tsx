@@ -65,12 +65,16 @@ export default function NewBookPage() {
         return;
       }
 
-      // Mock mode: generate immediately
+      // Trigger generation
       const genRes = await fetch(`/api/books/${bookId}/generate`, { method: "POST" });
-      if (!genRes.ok) {
+      const genData = await safeJson(genRes);
+
+      if (!genRes.ok || genData.queued) {
+        // Real AI queued via Inngest — show status page, not reader
         router.push(`/dashboard/books/${bookId}`);
         return;
       }
+      // Mock AI generated synchronously — go straight to reader
       router.push(`/dashboard/books/${bookId}/reader`);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error");

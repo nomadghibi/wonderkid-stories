@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import AutoRefresh from "@/components/dashboard/AutoRefresh";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -51,6 +52,8 @@ export default async function BookDetailPage({ params }: Params) {
         </div>
         <span className={`text-sm font-semibold px-3 py-1.5 rounded-full ${statusInfo.color}`}>{statusInfo.label}</span>
       </div>
+
+      <AutoRefresh status={book.status} />
 
       {/* Status card */}
       <div className="bg-white border border-gray-100 rounded-2xl p-6">

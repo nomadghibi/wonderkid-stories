@@ -9,6 +9,7 @@ import { checkBookQuality } from "@/agents/quality-agent";
 import { logAudit } from "@/lib/audit";
 import { sendDraftReadyEmail, sendAdminFailureAlert } from "@/lib/email";
 import { inngest } from "@/inngest/client";
+import { BUCKETS } from "@/lib/storage";
 import type { ChildProfile } from "@/types/child";
 import type { StoryTheme } from "@/types/theme";
 
@@ -100,7 +101,18 @@ export async function POST(_req: Request, { params }: Params) {
     for (const page of plan.pages) {
       const prompt = buildIllustrationPrompt(page, child);
       const result = await generateImage(prompt);
-      imageUrls[page.page_number] = result.imageUrl;
+
+      if (result.buffer) {
+        // Store DALL-E image in Supabase Storage for persistence
+        const storagePath = `users/${user.id}/books/${bookId}/pages/page-${page.page_number}.png`;
+        const { error: uploadErr } = await serviceClient.storage
+          .from(BUCKETS.bookAssets)
+          .upload(storagePath, result.buffer, { contentType: "image/png", upsert: true });
+
+        imageUrls[page.page_number] = uploadErr ? result.imageUrl : storagePath;
+      } else {
+        imageUrls[page.page_number] = result.imageUrl;
+      }
     }
 
     // Step 4: Assemble and save pages

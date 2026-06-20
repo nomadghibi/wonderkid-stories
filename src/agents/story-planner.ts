@@ -1,5 +1,7 @@
 import type { ChildProfile } from "@/types/child";
 import type { StoryTheme } from "@/types/theme";
+import { fillPrompt, STORY_GENERATION_PROMPT } from "@/config/prompts";
+import { getOpenAI } from "@/lib/openai";
 
 export interface StoryPlan {
   title: string;
@@ -24,7 +26,61 @@ export async function planStory(input: StoryPlannerInput): Promise<StoryPlan> {
   if (process.env.MOCK_AI_MODE === "true") {
     return generateMockStoryPlan(input);
   }
-  throw new Error("Real AI provider not configured. Set MOCK_AI_MODE=true or implement a provider.");
+  return generateRealStoryPlan(input);
+}
+
+async function generateRealStoryPlan(input: StoryPlannerInput): Promise<StoryPlan> {
+  const { child, theme } = input;
+  const openai = getOpenAI();
+
+  const prompt = fillPrompt(STORY_GENERATION_PROMPT, {
+    child_name: child.name,
+    age: String(child.age ?? 6),
+    reading_level: child.reading_level ?? "early_reader",
+    favorite_color: child.favorite_color ?? "blue",
+    favorite_animal: child.favorite_animal ?? "a dog",
+    favorite_sport: child.favorite_sport ?? "running",
+    hair_note: child.hair_note ?? "neat hair",
+    skin_tone: child.skin_tone ?? "warm",
+    theme_title: theme.title,
+    page_count: String(theme.page_count),
+  });
+
+  const response = await openai.chat.completions.create({
+    model: "gpt-4o",
+    messages: [{ role: "user", content: prompt }],
+    response_format: { type: "json_object" },
+    temperature: 0.8,
+  });
+
+  const content = response.choices[0].message.content;
+  if (!content) throw new Error("OpenAI returned empty story response");
+
+  const parsed = JSON.parse(content) as {
+    title: string;
+    summary: string;
+    pages: Array<{
+      page_number: number;
+      title: string;
+      text: string;
+      visual_description: string;
+    }>;
+  };
+
+  if (!parsed.pages || parsed.pages.length === 0) {
+    throw new Error("OpenAI returned story with no pages");
+  }
+
+  return {
+    title: parsed.title ?? `${child.name}'s ${theme.title}`,
+    summary: parsed.summary ?? "",
+    pages: parsed.pages.map((p) => ({
+      page_number: p.page_number,
+      title: p.title ?? "",
+      text: p.text ?? "",
+      visual_description: p.visual_description ?? "",
+    })),
+  };
 }
 
 function generateMockStoryPlan(input: StoryPlannerInput): StoryPlan {

@@ -7,6 +7,7 @@ import { buildIllustrationPrompt } from "@/agents/illustration-prompt";
 import { assembleBook } from "@/agents/book-assembler";
 import { checkBookQuality } from "@/agents/quality-agent";
 import { sendDraftReadyEmail, sendAdminFailureAlert } from "@/lib/email";
+import { BUCKETS } from "@/lib/storage";
 import type { ChildProfile } from "@/types/child";
 import type { StoryTheme } from "@/types/theme";
 
@@ -93,7 +94,16 @@ export const generateBookFunction = inngest.createFunction(
       for (const page of plan.pages) {
         const prompt = buildIllustrationPrompt(page, child);
         const result = await generateImage(prompt);
-        urls[page.page_number] = result.imageUrl;
+
+        if (result.buffer) {
+          const storagePath = `users/${userId}/books/${bookId}/pages/page-${page.page_number}.png`;
+          const { error: uploadErr } = await supabase.storage
+            .from(BUCKETS.bookAssets)
+            .upload(storagePath, result.buffer, { contentType: "image/png", upsert: true });
+          urls[page.page_number] = uploadErr ? result.imageUrl : storagePath;
+        } else {
+          urls[page.page_number] = result.imageUrl;
+        }
       }
       return urls;
     });

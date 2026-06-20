@@ -112,7 +112,9 @@ export default function BookReader({ book, pages, canApprove, isCompleted }: Boo
           {currentPage.image_url ? (
             <div className="relative w-full h-full" style={{ minHeight: isFullscreen ? "60vh" : "320px" }}>
               <Image
-                src={currentPage.image_url}
+                src={currentPage.image_url.startsWith("http")
+                  ? currentPage.image_url
+                  : `/api/books/${book.id}/page-image/${currentPage.id}`}
                 alt={currentPage.title ?? `Page ${currentPage.page_number}`}
                 fill
                 className="object-contain"
