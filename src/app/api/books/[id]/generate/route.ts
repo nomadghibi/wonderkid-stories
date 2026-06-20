@@ -76,7 +76,7 @@ export async function POST(_req: Request, { params }: Params) {
     await serviceClient
       .from("generation_jobs")
       .update({ current_step: "story_generation" })
-      .eq("id", job!.id);
+      .eq("id", job?.id ?? "");
 
     const plan = await planStory({ child, theme, dedication: book.dedication ?? undefined });
 
@@ -94,7 +94,7 @@ export async function POST(_req: Request, { params }: Params) {
     await serviceClient
       .from("generation_jobs")
       .update({ current_step: "image_generation" })
-      .eq("id", job!.id);
+      .eq("id", job?.id ?? "");
 
     const imageUrls: Record<number, string> = {};
     for (const page of plan.pages) {
@@ -107,7 +107,7 @@ export async function POST(_req: Request, { params }: Params) {
     await serviceClient
       .from("generation_jobs")
       .update({ current_step: "assembling" })
-      .eq("id", job!.id);
+      .eq("id", job?.id ?? "");
 
     const pageInserts = assembleBook(plan, bookId, imageUrls);
 
@@ -161,7 +161,7 @@ export async function POST(_req: Request, { params }: Params) {
     await serviceClient
       .from("generation_jobs")
       .update({ status: "completed", current_step: "done", completed_at: new Date().toISOString() })
-      .eq("id", job!.id);
+      .eq("id", job?.id ?? "");
 
     await logAudit(user.id, "book_generated", "books", bookId);
 
@@ -195,7 +195,7 @@ export async function POST(_req: Request, { params }: Params) {
     await serviceClient
       .from("generation_jobs")
       .update({ status: "failed", error_message: message, completed_at: new Date().toISOString() })
-      .eq("id", job!.id);
+      .eq("id", job?.id ?? "");
 
     // Alert admin (non-fatal)
     try {

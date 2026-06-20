@@ -28,6 +28,15 @@ export default function NewBookPage() {
     });
   }, []);
 
+  async function safeJson(res: Response) {
+    try {
+      const text = await res.text();
+      return text ? (JSON.parse(text) as Record<string, unknown>) : {};
+    } catch {
+      return {} as Record<string, unknown>;
+    }
+  }
+
   async function handleCreate() {
     setLoading(true);
     setError(null);
@@ -38,30 +47,31 @@ export default function NewBookPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ child_id: selectedChild, theme_id: selectedTheme, dedication }),
       });
-      if (!res.ok) throw new Error((await res.json()).error ?? "Failed to create book");
-      const book = await res.json();
+      const bookData = await safeJson(res);
+      if (!res.ok) throw new Error(String(bookData.error ?? `Create book failed (${res.status})`));
+      const bookId = bookData.id as string;
 
-      // 2. Create checkout session (mock mode returns { mock: true, redirect })
+      // 2. Checkout (mock bypasses Stripe)
       const checkoutRes = await fetch("/api/checkout/create-session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ book_id: book.id, product: "singleBook" }),
+        body: JSON.stringify({ book_id: bookId, product: "singleBook" }),
       });
-      if (!checkoutRes.ok) throw new Error((await checkoutRes.json()).error ?? "Checkout failed");
-      const checkout = await checkoutRes.json();
+      const checkout = await safeJson(checkoutRes);
+      if (!checkoutRes.ok) throw new Error(String(checkout.error ?? `Checkout failed (${checkoutRes.status})`));
 
-      if (checkout.mock) {
-        // Mock mode: generate immediately and go to reader
-        const genRes = await fetch(`/api/books/${book.id}/generate`, { method: "POST" });
-        if (!genRes.ok) {
-          router.push(`/dashboard/books/${book.id}`);
-          return;
-        }
-        router.push(`/dashboard/books/${book.id}/reader`);
-      } else {
-        // Real Stripe: redirect to checkout
-        window.location.href = checkout.url;
+      if (checkout.url) {
+        window.location.href = checkout.url as string;
+        return;
       }
+
+      // Mock mode: generate immediately
+      const genRes = await fetch(`/api/books/${bookId}/generate`, { method: "POST" });
+      if (!genRes.ok) {
+        router.push(`/dashboard/books/${bookId}`);
+        return;
+      }
+      router.push(`/dashboard/books/${bookId}/reader`);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error");
       setLoading(false);
