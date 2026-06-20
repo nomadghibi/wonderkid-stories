@@ -8,8 +8,11 @@ import { assembleBook } from "@/agents/book-assembler";
 import { checkBookQuality } from "@/agents/quality-agent";
 import { logAudit } from "@/lib/audit";
 import { sendDraftReadyEmail, sendAdminFailureAlert } from "@/lib/email";
+import { inngest } from "@/inngest/client";
 import type { ChildProfile } from "@/types/child";
 import type { StoryTheme } from "@/types/theme";
+
+const MOCK_AI = process.env.MOCK_AI_MODE === "true";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -18,6 +21,15 @@ export async function POST(_req: Request, { params }: Params) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  // In real mode, queue via Inngest and return immediately
+  if (!MOCK_AI && process.env.INNGEST_EVENT_KEY) {
+    await inngest.send({ name: "book/generate", data: { bookId, userId: user.id } });
+    const serviceClient = await createServiceClient();
+    await serviceClient.from("books").update({ status: "queued" }).eq("id", bookId);
+    await logAudit(user.id, "book_generation_queued", "books", bookId);
+    return NextResponse.json({ queued: true });
+  }
 
   // Fetch book with child and theme
   const { data: book } = await supabase

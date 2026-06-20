@@ -18,7 +18,7 @@ export default function DashboardHeader({ user }: { user: User }) {
   }
 
   return (
-    <header className="bg-white border-b border-gray-100 px-6 py-3 flex items-center justify-between">
+    <header className="hidden md:flex bg-white border-b border-gray-100 px-6 py-3 items-center justify-between">
       <div />
       <div className="flex items-center gap-3">
         <span className="text-sm text-gray-500 hidden sm:block">{user.email}</span>

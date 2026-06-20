@@ -32,6 +32,7 @@ export default function NewBookPage() {
     setLoading(true);
     setError(null);
     try {
+      // 1. Create book record
       const res = await fetch("/api/books", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -40,13 +41,27 @@ export default function NewBookPage() {
       if (!res.ok) throw new Error((await res.json()).error ?? "Failed to create book");
       const book = await res.json();
 
-      // Immediately trigger generation (mock mode: synchronous)
-      const genRes = await fetch(`/api/books/${book.id}/generate`, { method: "POST" });
-      if (!genRes.ok) {
-        router.push(`/dashboard/books/${book.id}`);
-        return;
+      // 2. Create checkout session (mock mode returns { mock: true, redirect })
+      const checkoutRes = await fetch("/api/checkout/create-session", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ book_id: book.id, product: "singleBook" }),
+      });
+      if (!checkoutRes.ok) throw new Error((await checkoutRes.json()).error ?? "Checkout failed");
+      const checkout = await checkoutRes.json();
+
+      if (checkout.mock) {
+        // Mock mode: generate immediately and go to reader
+        const genRes = await fetch(`/api/books/${book.id}/generate`, { method: "POST" });
+        if (!genRes.ok) {
+          router.push(`/dashboard/books/${book.id}`);
+          return;
+        }
+        router.push(`/dashboard/books/${book.id}/reader`);
+      } else {
+        // Real Stripe: redirect to checkout
+        window.location.href = checkout.url;
       }
-      router.push(`/dashboard/books/${book.id}/reader`);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error");
       setLoading(false);
