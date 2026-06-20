@@ -1,7 +1,8 @@
 "use client";
 
-import type { FontSize, ReaderMode } from "@/types/reader";
+import type { FontSize, FontFamily, ReaderMode } from "@/types/reader";
 import FontSizeControls from "./FontSizeControls";
+import FontFamilyControls from "./FontFamilyControls";
 
 interface ReaderToolbarProps {
   title: string;
@@ -9,6 +10,8 @@ interface ReaderToolbarProps {
   mode: ReaderMode;
   fontSize: FontSize;
   onFontSize: (s: FontSize) => void;
+  fontFamily: FontFamily;
+  onFontFamily: (f: FontFamily) => void;
   onClose?: () => void;
   backLabel?: string;
   backHref?: string;
@@ -26,6 +29,8 @@ export default function ReaderToolbar({
   mode,
   fontSize,
   onFontSize,
+  fontFamily,
+  onFontFamily,
   onClose,
   backLabel,
   backHref,
@@ -69,6 +74,7 @@ export default function ReaderToolbar({
         <span className={`text-xs font-bold px-2.5 py-1 rounded-full hidden sm:inline-block ${badge.color}`}>
           {badge.label}
         </span>
+        <FontFamilyControls value={fontFamily} onChange={onFontFamily} />
         <FontSizeControls fontSize={fontSize} onChange={onFontSize} />
       </div>
     </div>

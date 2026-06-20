@@ -1,12 +1,13 @@
 "use client";
 
 import Image from "next/image";
-import type { BookReaderPage, FontSize } from "@/types/reader";
-import { FONT_SIZE_PX } from "@/types/reader";
+import type { BookReaderPage, FontSize, FontFamily } from "@/types/reader";
+import { FONT_SIZE_PX, FONT_FAMILY_CSS } from "@/types/reader";
 
 interface BookPageProps {
   page: BookReaderPage;
   fontSize: FontSize;
+  fontFamily?: FontFamily;
   bookId?: string;
   side?: "left" | "right" | "single";
   displayNumber?: number;
@@ -31,9 +32,10 @@ function resolveImageUrl(page: BookReaderPage, bookId?: string): string {
   return page.imageUrl;
 }
 
-function CertificatePage({ page, fontSize }: { page: BookReaderPage; fontSize: FontSize }) {
+function CertificatePage({ page, fontSize, fontFamily }: { page: BookReaderPage; fontSize: FontSize; fontFamily?: FontFamily }) {
+  const ff = fontFamily ? FONT_FAMILY_CSS[fontFamily] : "'Nunito', sans-serif";
   return (
-    <div className="h-full flex flex-col items-center justify-center bg-gradient-to-br from-[#FFF8ED] to-yellow-50 p-8 text-center">
+    <div className="h-full flex flex-col items-center justify-center bg-gradient-to-br from-[#FFF8ED] to-yellow-50 p-8 text-center" style={{ fontFamily: ff }}>
       <div className="text-6xl mb-4">🏅</div>
       <div
         className="border-4 border-[#FFD166] rounded-2xl p-8 max-w-sm w-full bg-white/80"
@@ -64,9 +66,10 @@ function CertificatePage({ page, fontSize }: { page: BookReaderPage; fontSize: F
   );
 }
 
-function DedicationPage({ page, fontSize }: { page: BookReaderPage; fontSize: FontSize }) {
+function DedicationPage({ page, fontSize, fontFamily }: { page: BookReaderPage; fontSize: FontSize; fontFamily?: FontFamily }) {
+  const ff = fontFamily ? FONT_FAMILY_CSS[fontFamily] : "'Nunito', sans-serif";
   return (
-    <div className="h-full flex flex-col items-center justify-center bg-gradient-to-br from-purple-50 to-[#FFF8ED] p-10 text-center">
+    <div className="h-full flex flex-col items-center justify-center bg-gradient-to-br from-purple-50 to-[#FFF8ED] p-10 text-center" style={{ fontFamily: ff }}>
       <div className="text-4xl mb-6">💜</div>
       <p className="text-xs font-bold text-[#6C63FF] uppercase tracking-widest mb-4">
         A Special Message
@@ -84,27 +87,29 @@ function DedicationPage({ page, fontSize }: { page: BookReaderPage; fontSize: Fo
 export default function BookPage({
   page,
   fontSize,
+  fontFamily,
   bookId,
   side = "single",
   displayNumber,
   totalPages,
 }: BookPageProps) {
   if (page.pageType === "certificate") {
-    return <CertificatePage page={page} fontSize={fontSize} />;
+    return <CertificatePage page={page} fontSize={fontSize} fontFamily={fontFamily} />;
   }
 
   if (page.pageType === "dedication") {
-    return <DedicationPage page={page} fontSize={fontSize} />;
+    return <DedicationPage page={page} fontSize={fontSize} fontFamily={fontFamily} />;
   }
 
   const imageUrl = resolveImageUrl(page, bookId);
   const isCover = page.pageType === "cover";
   const textSize = FONT_SIZE_PX[fontSize];
+  const ff = fontFamily ? FONT_FAMILY_CSS[fontFamily] : "'Nunito', sans-serif";
 
   return (
     <div
       className="h-full flex flex-col bg-white relative overflow-hidden select-none"
-      style={{ fontFamily: "'Nunito', sans-serif" }}
+      style={{ fontFamily: ff }}
     >
       {/* Illustration */}
       <div

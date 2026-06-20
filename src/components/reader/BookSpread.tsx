@@ -1,12 +1,13 @@
 "use client";
 
-import type { BookReaderPage, FontSize } from "@/types/reader";
+import type { BookReaderPage, FontSize, FontFamily } from "@/types/reader";
 import BookPage from "./BookPage";
 
 interface BookSpreadProps {
   leftPage: BookReaderPage | null;
   rightPage: BookReaderPage | null;
   fontSize: FontSize;
+  fontFamily?: FontFamily;
   bookId?: string;
   displayNumbers: [number | undefined, number | undefined];
   totalStoryPages: number;
@@ -18,6 +19,7 @@ export default function BookSpread({
   leftPage,
   rightPage,
   fontSize,
+  fontFamily,
   bookId,
   displayNumbers,
   totalStoryPages,
@@ -62,6 +64,7 @@ export default function BookSpread({
             <BookPage
               page={leftPage}
               fontSize={fontSize}
+              fontFamily={fontFamily}
               bookId={bookId}
               side="left"
               displayNumber={displayNumbers[0]}
@@ -89,6 +92,7 @@ export default function BookSpread({
             <BookPage
               page={rightPage}
               fontSize={fontSize}
+              fontFamily={fontFamily}
               bookId={bookId}
               side="right"
               displayNumber={displayNumbers[1]}

@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import type { BookReaderData, BookReaderPage, FontSize, ReaderMode } from "@/types/reader";
-import { FONT_SIZE_PX, FONT_SIZES } from "@/types/reader";
+import type { BookReaderData, BookReaderPage, FontSize, FontFamily, ReaderMode } from "@/types/reader";
+import { FONT_SIZES, FONT_FAMILIES } from "@/types/reader";
 
 import BookCover from "./BookCover";
 import BookSpread from "./BookSpread";
@@ -12,7 +12,8 @@ import ReaderProgress from "./ReaderProgress";
 import ReaderToolbar from "./ReaderToolbar";
 import WonderHandHint from "./WonderHandHint";
 
-const LS_FONT_KEY = "wk_font_size_v1";
+const LS_FONT_SIZE_KEY = "wk_font_size_v1";
+const LS_FONT_FAMILY_KEY = "wk_font_family_v1";
 
 interface RealBookReaderProps {
   data: BookReaderData;
@@ -54,6 +55,7 @@ export default function RealBookReader({
   const [animDir, setAnimDir] = useState<"next" | "prev" | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [fontSize, setFontSize] = useState<FontSize>("large");
+  const [fontFamily, setFontFamily] = useState<FontFamily>("nunito");
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [feedbackText, setFeedbackText] = useState("");
   const [approving, setApproving] = useState(false);
@@ -73,17 +75,24 @@ export default function RealBookReader({
     return () => mq.removeEventListener("change", h);
   }, []);
 
-  // Restore saved font size
+  // Restore saved font preferences
   useEffect(() => {
     try {
-      const saved = localStorage.getItem(LS_FONT_KEY) as FontSize | null;
-      if (saved && FONT_SIZES.includes(saved)) setFontSize(saved);
+      const savedSize = localStorage.getItem(LS_FONT_SIZE_KEY) as FontSize | null;
+      if (savedSize && FONT_SIZES.includes(savedSize)) setFontSize(savedSize);
+      const savedFamily = localStorage.getItem(LS_FONT_FAMILY_KEY) as FontFamily | null;
+      if (savedFamily && FONT_FAMILIES.includes(savedFamily)) setFontFamily(savedFamily);
     } catch { /* ignore */ }
   }, []);
 
   function handleFontSize(s: FontSize) {
     setFontSize(s);
-    try { localStorage.setItem(LS_FONT_KEY, s); } catch { /* ignore */ }
+    try { localStorage.setItem(LS_FONT_SIZE_KEY, s); } catch { /* ignore */ }
+  }
+
+  function handleFontFamily(f: FontFamily) {
+    setFontFamily(f);
+    try { localStorage.setItem(LS_FONT_FAMILY_KEY, f); } catch { /* ignore */ }
   }
 
   // Navigation
@@ -223,6 +232,8 @@ export default function RealBookReader({
         mode={data.mode}
         fontSize={fontSize}
         onFontSize={handleFontSize}
+        fontFamily={fontFamily}
+        onFontFamily={handleFontFamily}
         backHref={backHref}
         backLabel={backLabel}
       />
@@ -272,6 +283,7 @@ export default function RealBookReader({
               <BookPage
                 page={mobilePage}
                 fontSize={fontSize}
+                fontFamily={fontFamily}
                 bookId={bookId}
                 side="single"
                 displayNumber={storyNum(mobilePage)}
@@ -285,6 +297,7 @@ export default function RealBookReader({
             leftPage={leftPage}
             rightPage={rightPage}
             fontSize={fontSize}
+            fontFamily={fontFamily}
             bookId={bookId}
             displayNumbers={[storyNum(leftPage), storyNum(rightPage)]}
             totalStoryPages={totalStory}

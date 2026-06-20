@@ -1,4 +1,32 @@
 export type ReaderMode = "sample" | "review" | "final";
+
+export type FontFamily = "nunito" | "lexend" | "abeezee" | "andika" | "fredoka";
+
+export const FONT_FAMILY_LABEL: Record<FontFamily, string> = {
+  nunito:   "Nunito",
+  lexend:   "Lexend",
+  abeezee:  "ABeeZee",
+  andika:   "Andika",
+  fredoka:  "Fredoka",
+};
+
+export const FONT_FAMILY_CSS: Record<FontFamily, string> = {
+  nunito:   "var(--font-nunito)",
+  lexend:   "var(--font-lexend)",
+  abeezee:  "var(--font-abeezee)",
+  andika:   "var(--font-andika)",
+  fredoka:  "var(--font-fredoka)",
+};
+
+export const FONT_FAMILY_DESC: Record<FontFamily, string> = {
+  nunito:   "Warm & rounded",
+  lexend:   "Research-backed reading clarity",
+  abeezee:  "Designed for young children",
+  andika:   "Literacy-focused spacing",
+  fredoka:  "Playful & friendly",
+};
+
+export const FONT_FAMILIES: FontFamily[] = ["nunito", "lexend", "abeezee", "andika", "fredoka"];
 export type FontSize = "small" | "normal" | "large" | "extraLarge";
 export type BookPageType = "cover" | "dedication" | "story" | "certificate" | "ending";
 
