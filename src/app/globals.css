@@ -1,0 +1,35 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand: #6C63FF;
+  --color-brand-dark: #5A52E0;
+  --color-brand-light: #E8E6FF;
+  --color-accent-yellow: #FFD166;
+  --color-accent-green: #06D6A0;
+  --color-accent-red: #EF476F;
+  --color-bg: #FFF8ED;
+  --color-text: #24304A;
+  --color-text-muted: #6B7280;
+  --color-border: #E5E7EB;
+  --color-surface: #FFFFFF;
+
+  --font-nunito: "Nunito", sans-serif;
+}
+
+@layer base {
+  html {
+    background-color: #FFF8ED;
+    color: #24304A;
+    font-family: "Nunito", sans-serif;
+  }
+
+  body {
+    @apply antialiased;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: "Nunito", sans-serif;
+    font-weight: 800;
+    color: #24304A;
+  }
+}
