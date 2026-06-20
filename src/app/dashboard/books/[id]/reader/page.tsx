@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { notFound, redirect } from "next/navigation";
-import BookReader from "@/components/reader/BookReader";
+import RealBookReader from "@/components/reader/RealBookReader";
+import type { BookReaderData, BookReaderPage } from "@/types/reader";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -31,12 +32,35 @@ export default async function ReaderPage({ params }: Params) {
     redirect(`/dashboard/books/${bookId}`);
   }
 
+  const isCompleted = book.status === "completed" || book.status === "approved";
+  const mode = isCompleted ? "final" : "review";
+
+  const readerPages: BookReaderPage[] = (pages ?? []).map(p => ({
+    pageId: p.id,
+    pageNumber: p.page_number,
+    pageType: p.page_type as BookReaderPage["pageType"],
+    title: p.title ?? undefined,
+    text: p.text_content ?? undefined,
+    imageUrl: p.image_url ?? undefined,
+  }));
+
+  const coverPage = readerPages.find(p => p.pageType === "cover");
+
+  const readerData: BookReaderData = {
+    id: bookId,
+    title: book.title ?? "My Storybook",
+    childName: (book.child_profiles as { name: string } | null)?.name,
+    coverImageUrl: coverPage?.imageUrl,
+    mode,
+    pages: readerPages,
+  };
+
   return (
-    <BookReader
-      book={book}
-      pages={pages ?? []}
-      canApprove={book.status === "reader_ready" || book.status === "review_pending"}
-      isCompleted={book.status === "completed"}
+    <RealBookReader
+      data={readerData}
+      bookId={bookId}
+      backHref="/dashboard/books"
+      backLabel="My Books"
     />
   );
 }
