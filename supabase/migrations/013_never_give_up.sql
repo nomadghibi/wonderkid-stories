@@ -15,16 +15,16 @@ select s.id,
   'The Story of Mia and Her Big Goal',
   'Mia wants to enter the school art contest, but her pictures don''t look right. With her mom''s encouragement she keeps trying — and learns that never giving up is the real win.',
   'beginner', 4, 7, 10,
-  '/library/never-give-up-mia/page-01.png',
+  '/library/never-give-up-mia/cover.png',
   'A855F7', 'ready_made_image_pages', true, true, 7
 from public.subjects s where s.slug = 'social-skills'
 on conflict (slug) do nothing;
 
--- Cover (uses page-01 image)
+-- Cover
 insert into public.library_book_pages
   (book_id, page_number, page_type, title, text_content, image_url, layout_type, has_embedded_text)
 select b.id, 0, 'cover', 'Never Give Up!', null,
-  '/library/never-give-up-mia/page-01.png', 'image_only', true
+  '/library/never-give-up-mia/cover.png', 'image_only', true
 from public.library_books b where b.slug = 'never-give-up-mia'
 on conflict (book_id, page_number) do nothing;
 
