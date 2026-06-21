@@ -8,6 +8,7 @@ interface BookCoverProps {
   title: string;
   childName?: string;
   coverImageUrl?: string;
+  isImageOnly?: boolean;
   onOpen: () => void;
   backHref?: string;
   backLabel?: string;
@@ -17,6 +18,7 @@ export default function BookCover({
   title,
   childName,
   coverImageUrl,
+  isImageOnly,
   onOpen,
   backHref,
   backLabel,
@@ -44,9 +46,11 @@ export default function BookCover({
       {/* Main content */}
       <div className="flex-1 flex flex-col items-center justify-center px-6 py-4 gap-6">
         {/* Subtitle */}
-        <p className="text-[#6C63FF] font-bold text-sm tracking-wide uppercase opacity-70">
-          {childName ? `A Story for ${childName}` : "Your Personalized Storybook"}
-        </p>
+        {!isImageOnly && (
+          <p className="text-[#6C63FF] font-bold text-sm tracking-wide uppercase opacity-70">
+            {childName ? `A Story for ${childName}` : "Your Personalized Storybook"}
+          </p>
+        )}
 
         {/* 3D Book */}
         <div
@@ -107,24 +111,27 @@ export default function BookCover({
                 unoptimized
                 priority
               />
-              {/* Gradient overlay */}
-              <div
-                className="absolute inset-0"
-                style={{
-                  background: "linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.65) 100%)",
-                }}
-              />
-              {/* Title */}
-              <div className="absolute bottom-0 left-0 right-0 p-4">
-                <h1 className="font-extrabold text-white leading-tight drop-shadow-lg text-lg">
-                  {title}
-                </h1>
-                {childName && (
-                  <p className="text-white/80 text-xs mt-1 font-semibold">
-                    A story for {childName}
-                  </p>
-                )}
-              </div>
+              {/* Gradient overlay + title — hidden for image-only books (title baked into cover art) */}
+              {!isImageOnly && (
+                <>
+                  <div
+                    className="absolute inset-0"
+                    style={{
+                      background: "linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.65) 100%)",
+                    }}
+                  />
+                  <div className="absolute bottom-0 left-0 right-0 p-4">
+                    <h1 className="font-extrabold text-white leading-tight drop-shadow-lg text-lg">
+                      {title}
+                    </h1>
+                    {childName && (
+                      <p className="text-white/80 text-xs mt-1 font-semibold">
+                        A story for {childName}
+                      </p>
+                    )}
+                  </div>
+                </>
+              )}
               {/* Sheen */}
               <div
                 className="absolute inset-0 pointer-events-none"

@@ -245,6 +245,7 @@ export default function RealBookReader({
         title={data.title}
         childName={data.childName}
         coverImageUrl={data.coverImageUrl ?? pages.find(p => p.pageType === "cover")?.imageUrl}
+        isImageOnly={isImageOnlyBook}
         onOpen={() => setIsOpen(true)}
         backHref={backHref}
         backLabel={backLabel}
