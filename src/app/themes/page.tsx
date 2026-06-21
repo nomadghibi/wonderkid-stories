@@ -2,36 +2,33 @@ import Link from "next/link";
 import { createServiceClient } from "@/lib/supabase/server";
 import type { BookTemplate } from "@/types/template";
 
-const CATEGORY_EMOJI: Record<string, string> = {
-  Sports: "⚾",
-  Fantasy: "🌲",
-  Adventure: "🚀",
-  Science: "🔬",
-  Animals: "🐾",
-  "Underwater Explorer": "🐠",
-  "Superhero Academy": "🦸",
-  "Dinosaur Discovery": "🦕",
-};
-
-const SLUG_EMOJI: Record<string, string> = {
-  "baseball-hero": "⚾",
-  "magical-forest": "🌲",
-  "space-explorer": "🚀",
-  "underwater-explorer": "🐠",
-  "superhero-academy": "🦸",
-  "dinosaur-discovery": "🦕",
-};
-
-const GRADIENT_BY_CATEGORY: Record<string, string> = {
-  Sports: "from-green-50 to-emerald-100",
-  Fantasy: "from-purple-50 to-violet-100",
-  Adventure: "from-blue-50 to-indigo-100",
-  default: "from-purple-50 to-blue-50",
-};
-
 function formatPrice(cents: number): string {
   return `$${(cents / 100).toFixed(2)}`;
 }
+
+const SLUG_EMOJI: Record<string, string> = {
+  "baseball-hero":      "⚾",
+  "magical-forest":     "🌲",
+  "space-explorer":     "🚀",
+  "underwater-explorer":"🐠",
+  "superhero-academy":  "🦸",
+  "dinosaur-discovery": "🦕",
+};
+
+const CATEGORY_BADGE: Record<string, { bg: string; color: string }> = {
+  Sports:    { bg: "#DCFCE7", color: "#166534" },
+  Fantasy:   { bg: "#EDE9FE", color: "#5B21B6" },
+  Adventure: { bg: "#DBEAFE", color: "#1E40AF" },
+  Science:   { bg: "#FEF9C3", color: "#854D0E" },
+  Animals:   { bg: "#FFE4E6", color: "#9F1239" },
+};
+
+const STEPS = [
+  { n: "1", icon: "🎭", title: "Pick an adventure",  desc: "Choose the theme that fits your child's personality." },
+  { n: "2", icon: "👧", title: "Add your child",     desc: "Name, age, photo, favorites — takes 2 minutes." },
+  { n: "3", icon: "✨", title: "AI builds the book", desc: "Custom story and illustrations created just for them." },
+  { n: "4", icon: "📥", title: "Read & download",    desc: "Read online instantly, approve, then download your PDF." },
+];
 
 export default async function ThemesPage() {
   const supabase = await createServiceClient();
@@ -42,10 +39,12 @@ export default async function ThemesPage() {
     .order("created_at", { ascending: true });
 
   const catalog = (templates ?? []) as BookTemplate[];
+  const heroCovers = catalog.filter(t => t.sample_cover_url).slice(0, 4);
 
   return (
-    <main className="min-h-screen bg-[#FFF8ED]">
-      {/* Nav */}
+    <main className="min-h-screen bg-[#FFF8ED] overflow-x-hidden">
+
+      {/* ── Nav ──────────────────────────────────────────────────────────── */}
       <nav className="flex items-center justify-between px-6 py-4 max-w-7xl mx-auto border-b border-[#FFD166]/30">
         <Link href="/" className="flex items-center gap-2">
           <span className="text-2xl">📖</span>
@@ -67,78 +66,152 @@ export default async function ThemesPage() {
         </div>
       </nav>
 
-      <section className="max-w-6xl mx-auto px-6 py-16">
-        {/* Hero */}
-        <div className="text-center mb-14">
-          <div className="inline-block bg-[#6C63FF]/10 text-[#6C63FF] text-sm font-bold px-4 py-1.5 rounded-full mb-4">
-            {catalog.length} Adventure{catalog.length !== 1 ? "s" : ""} Available
+      {/* ── Hero ─────────────────────────────────────────────────────────── */}
+      <section className="max-w-7xl mx-auto px-6 pt-16 pb-20 grid md:grid-cols-2 gap-12 items-center">
+        {/* Left: copy */}
+        <div>
+          <div className="inline-flex items-center gap-2 bg-[#FFD166]/30 text-[#856015] text-sm font-extrabold px-4 py-1.5 rounded-full mb-6">
+            ⭐ Loved by 500+ families
           </div>
-          <h1 className="text-4xl md:text-5xl font-extrabold text-[#24304A] mb-4 leading-tight">
-            Choose Your Child's Adventure
+
+          <h1 className="text-5xl md:text-6xl font-extrabold text-[#24304A] leading-[1.08] mb-6">
+            Your child.<br />
+            Their story.<br />
+            <span className="text-[#6C63FF]">Their book.</span>
           </h1>
-          <p className="text-lg text-gray-500 max-w-xl mx-auto">
-            Each book is fully personalized for your child — their name, their photo, their story. Preview any template for free before buying.
+
+          <p className="text-lg text-gray-500 leading-relaxed mb-8 max-w-md">
+            A fully personalized illustrated storybook — your child's name, photo, and adventure. Created by AI in minutes. Loved forever.
+          </p>
+
+          <div className="flex flex-wrap gap-3 mb-8">
+            <Link
+              href="#templates"
+              className="bg-[#6C63FF] hover:bg-[#5A52E0] text-white font-extrabold px-8 py-4 rounded-2xl text-base transition-all shadow-lg shadow-purple-200/60 active:scale-95"
+            >
+              Choose an Adventure ↓
+            </Link>
+            <Link
+              href="/library"
+              className="border-2 border-gray-200 hover:border-[#6C63FF] text-gray-600 hover:text-[#6C63FF] font-bold px-6 py-4 rounded-2xl text-base transition-colors"
+            >
+              📚 Read Free Books
+            </Link>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-sm text-gray-400 font-medium">
+            <span>⭐⭐⭐⭐⭐ 4.9 / 5</span>
+            <span className="text-gray-200 hidden sm:inline">|</span>
+            <span>📥 Download in minutes</span>
+            <span className="text-gray-200 hidden sm:inline">|</span>
+            <span>✅ 100% satisfaction</span>
+          </div>
+        </div>
+
+        {/* Right: cover collage */}
+        {heroCovers.length >= 2 && (
+          <div className="hidden md:grid grid-cols-2 gap-4">
+            {heroCovers.map((t, i) => (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                key={t.id}
+                src={t.sample_cover_url!}
+                alt={t.title}
+                className="w-full rounded-2xl shadow-xl object-cover"
+                style={{
+                  aspectRatio: "3/4",
+                  transform: i % 2 === 0 ? "rotate(-2deg)" : "rotate(1.5deg)",
+                  transition: "transform 0.3s",
+                }}
+              />
+            ))}
+          </div>
+        )}
+      </section>
+
+      {/* ── Template grid ────────────────────────────────────────────────── */}
+      <section id="templates" className="max-w-7xl mx-auto px-6 pb-24">
+        <div className="text-center mb-12">
+          <h2 className="text-3xl md:text-4xl font-extrabold text-[#24304A] mb-2">
+            Choose your adventure
+          </h2>
+          <p className="text-gray-500">
+            Preview any book free — no account needed
           </p>
         </div>
 
-        {/* Template grid */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 mb-16">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-7">
           {catalog.map((template) => {
-            const emoji = SLUG_EMOJI[template.slug] ?? CATEGORY_EMOJI[template.category ?? ""] ?? "📖";
-            const gradient = GRADIENT_BY_CATEGORY[template.category ?? ""] ?? GRADIENT_BY_CATEGORY.default;
+            const emoji = SLUG_EMOJI[template.slug] ?? "📖";
+            const badge = CATEGORY_BADGE[template.category ?? ""] ?? { bg: "#EDE9FE", color: "#5B21B6" };
 
             return (
               <div
                 key={template.id}
-                className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden hover:shadow-md transition-all hover:-translate-y-0.5 flex flex-col"
+                className="bg-white rounded-3xl border border-gray-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-200 overflow-hidden flex flex-col"
               >
-                {/* Cover area */}
-                <div className={`bg-gradient-to-br ${gradient} h-36 flex items-center justify-center relative`}>
+                {/* Cover — portrait book ratio */}
+                <div className="relative overflow-hidden flex-shrink-0" style={{ aspectRatio: "3/4" }}>
                   {template.sample_cover_url ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
                       src={template.sample_cover_url}
                       alt={template.title}
-                      className="h-full w-full object-cover"
+                      className="w-full h-full object-cover"
                     />
                   ) : (
-                    <span className="text-7xl">{emoji}</span>
+                    <div
+                      className="w-full h-full flex items-center justify-center"
+                      style={{ background: `${badge.bg}` }}
+                    >
+                      <span className="text-[96px] leading-none">{emoji}</span>
+                    </div>
                   )}
-                  <div className="absolute top-3 left-3 bg-white/80 backdrop-blur-sm text-xs font-bold text-gray-600 px-2.5 py-1 rounded-full">
+
+                  {/* Category badge */}
+                  <span
+                    className="absolute top-3 left-3 text-[11px] font-extrabold px-2.5 py-1 rounded-full"
+                    style={{ background: badge.bg, color: badge.color }}
+                  >
                     {template.category ?? "Adventure"}
-                  </div>
-                  <div className="absolute top-3 right-3 bg-[#6C63FF] text-white text-xs font-bold px-2.5 py-1 rounded-full">
+                  </span>
+
+                  {/* Price badge */}
+                  <span className="absolute top-3 right-3 bg-white/95 text-[#6C63FF] text-xs font-extrabold px-2.5 py-1 rounded-full shadow">
                     {formatPrice(template.price_cents)}
-                  </div>
+                  </span>
                 </div>
 
                 {/* Info */}
-                <div className="p-6 flex flex-col flex-1">
-                  <h3 className="font-extrabold text-[#24304A] text-lg mb-1">{template.title}</h3>
+                <div className="p-5 flex flex-col flex-1">
+                  <h3 className="font-extrabold text-[#24304A] text-[17px] leading-snug mb-1">
+                    {template.title}
+                  </h3>
                   {template.subtitle && (
-                    <p className="text-[#6C63FF] text-xs font-semibold mb-2">{template.subtitle}</p>
+                    <p className="text-xs text-[#6C63FF] font-semibold mb-1.5">{template.subtitle}</p>
                   )}
-                  <p className="text-sm text-gray-500 mb-4 line-clamp-2 flex-1">{template.description}</p>
+                  <p className="text-sm text-gray-500 leading-relaxed line-clamp-2 flex-1 mb-4">
+                    {template.description}
+                  </p>
 
-                  {/* Meta */}
-                  <div className="flex items-center justify-between text-xs text-gray-400 mb-5">
+                  <div className="flex items-center gap-2 text-xs text-gray-400 mb-4">
                     <span>Ages {template.age_min}–{template.age_max}</span>
+                    <span>·</span>
                     <span>{template.page_count} illustrated pages</span>
                   </div>
 
-                  {/* Actions */}
                   <div className="flex gap-2">
                     <Link
                       href={`/themes/${template.slug}/preview`}
-                      className="flex-1 text-center border-2 border-[#6C63FF] text-[#6C63FF] hover:bg-[#6C63FF]/5 font-bold py-2.5 rounded-xl text-sm transition-colors"
+                      className="flex-1 text-center border-2 border-[#6C63FF]/25 text-[#6C63FF] hover:border-[#6C63FF] font-bold py-2.5 rounded-xl text-sm transition-colors"
                     >
-                      👁 Preview
+                      Preview free
                     </Link>
                     <Link
                       href={`/register?template=${template.slug}`}
                       className="flex-1 text-center bg-[#6C63FF] hover:bg-[#5A52E0] text-white font-bold py-2.5 rounded-xl text-sm transition-colors"
                     >
-                      Create Book →
+                      Create book →
                     </Link>
                   </div>
                 </div>
@@ -146,54 +219,89 @@ export default async function ThemesPage() {
             );
           })}
 
-          {/* Placeholder "coming soon" card */}
-          <div className="bg-white/50 rounded-2xl border border-dashed border-gray-200 p-6 flex flex-col items-center justify-center text-center min-h-[320px]">
-            <div className="text-4xl mb-3">🎨</div>
-            <h3 className="font-bold text-gray-400 mb-2">More Coming Soon</h3>
-            <p className="text-sm text-gray-400 mb-4">
-              Princess Adventure, Dinosaur Quest, Birthday Adventure, and more are on the way.
+          {/* Coming soon card */}
+          <div className="rounded-3xl border-2 border-dashed border-gray-200 p-8 flex flex-col items-center justify-center text-center">
+            <div className="text-5xl mb-3">🎨</div>
+            <h3 className="font-extrabold text-gray-400 mb-1">More coming soon</h3>
+            <p className="text-sm text-gray-400 mb-5 leading-relaxed">
+              Princess, Dinosaur, Birthday and more adventures on the way
             </p>
             <Link
               href="/register"
-              className="text-sm font-bold text-[#6C63FF] hover:opacity-80"
+              className="text-sm font-bold text-[#6C63FF] hover:opacity-75 transition-opacity"
             >
               Get notified →
             </Link>
           </div>
         </div>
+      </section>
 
-        {/* How it works strip */}
-        <div className="bg-white border border-gray-100 rounded-2xl p-8 mb-8">
-          <h2 className="text-center font-extrabold text-[#24304A] text-xl mb-8">How It Works</h2>
-          <div className="grid md:grid-cols-4 gap-6">
-            {[
-              { step: "1", icon: "📖", title: "Choose a Template", desc: "Pick the adventure that fits your child best." },
-              { step: "2", icon: "👦", title: "Add Your Child", desc: "Enter name, age, preferences and upload a photo." },
-              { step: "3", icon: "⚡", title: "AI Personalizes It", desc: "We generate a custom story and illustrations in minutes." },
-              { step: "4", icon: "📥", title: "Review & Download", desc: "Read the book online, approve, and download your PDF." },
-            ].map((item) => (
-              <div key={item.step} className="text-center">
-                <div className="w-10 h-10 bg-[#6C63FF] text-white font-extrabold text-sm rounded-full flex items-center justify-center mx-auto mb-3">
-                  {item.step}
+      {/* ── How it works ─────────────────────────────────────────────────── */}
+      <section className="bg-white py-20">
+        <div className="max-w-5xl mx-auto px-6">
+          <h2 className="text-3xl md:text-4xl font-extrabold text-[#24304A] text-center mb-16">
+            How it works
+          </h2>
+          <div className="grid md:grid-cols-4 gap-8">
+            {STEPS.map((s, i) => (
+              <div key={s.n} className="text-center relative">
+                {/* Connecting line */}
+                {i < STEPS.length - 1 && (
+                  <div
+                    className="hidden md:block absolute top-5 left-1/2 w-full h-0 border-t-2 border-dashed border-[#6C63FF]/20 pointer-events-none"
+                    style={{ marginLeft: "20px" }}
+                  />
+                )}
+                {/* Step number */}
+                <div className="w-10 h-10 bg-[#6C63FF] text-white font-extrabold text-sm rounded-full flex items-center justify-center mx-auto mb-4 relative z-10 shadow-md shadow-purple-200/50">
+                  {s.n}
                 </div>
-                <div className="text-3xl mb-2">{item.icon}</div>
-                <h3 className="font-bold text-[#24304A] text-sm mb-1">{item.title}</h3>
-                <p className="text-xs text-gray-500">{item.desc}</p>
+                <div className="text-4xl mb-3">{s.icon}</div>
+                <h3 className="font-extrabold text-[#24304A] mb-2">{s.title}</h3>
+                <p className="text-sm text-gray-500 leading-relaxed">{s.desc}</p>
               </div>
             ))}
           </div>
         </div>
+      </section>
 
-        {/* CTA */}
-        <div className="bg-[#6C63FF] rounded-2xl p-8 text-center text-white">
-          <h2 className="text-2xl font-extrabold mb-2">Ready to create a story?</h2>
-          <p className="text-purple-200 mb-6 text-sm">Preview any book free. Create your child's personalized version from $14.99.</p>
+      {/* ── Trust strip ──────────────────────────────────────────────────── */}
+      <section className="max-w-7xl mx-auto px-6 py-16">
+        <div className="grid sm:grid-cols-3 gap-6">
+          {[
+            { icon: "🎨", title: "Real illustrations", desc: "Every page has a unique AI-generated illustration tailored to your child." },
+            { icon: "⚡", title: "Ready in minutes", desc: "From order to finished book in under 5 minutes. Preview before you pay." },
+            { icon: "💜", title: "Loved by families", desc: "Over 500 personalized books created. 4.9 ★ average rating from parents." },
+          ].map(c => (
+            <div key={c.title} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 text-center">
+              <div className="text-4xl mb-3">{c.icon}</div>
+              <h3 className="font-extrabold text-[#24304A] mb-2">{c.title}</h3>
+              <p className="text-sm text-gray-500 leading-relaxed">{c.desc}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── Bottom CTA ───────────────────────────────────────────────────── */}
+      <section className="max-w-4xl mx-auto px-6 pb-24">
+        <div
+          className="rounded-3xl p-12 text-center text-white"
+          style={{ background: "linear-gradient(135deg, #6C63FF 0%, #5A52E0 100%)" }}
+        >
+          <div className="text-5xl mb-4">📖</div>
+          <h2 className="text-3xl font-extrabold mb-3">
+            Create their story today
+          </h2>
+          <p className="text-purple-200 mb-8 max-w-sm mx-auto leading-relaxed">
+            Preview any book for free. Personalized versions from {formatPrice(1499)}.
+          </p>
           <Link
             href="/register"
-            className="inline-block bg-white text-[#6C63FF] font-extrabold px-8 py-3 rounded-xl hover:bg-purple-50 transition-colors text-sm"
+            className="inline-block bg-white text-[#6C63FF] font-extrabold px-10 py-4 rounded-2xl hover:bg-purple-50 transition-colors shadow-xl text-base"
           >
             Get Started Free →
           </Link>
+          <p className="text-purple-300/70 text-xs mt-4">No account needed to preview</p>
         </div>
       </section>
     </main>
