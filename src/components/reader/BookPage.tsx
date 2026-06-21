@@ -4,6 +4,8 @@ import Image from "next/image";
 import type { BookReaderPage, FontSize, FontFamily } from "@/types/reader";
 import { FONT_SIZE_PX, FONT_FAMILY_CSS } from "@/types/reader";
 
+interface HighlightRange { charStart: number; charEnd: number }
+
 interface BookPageProps {
   page: BookReaderPage;
   fontSize: FontSize;
@@ -11,9 +13,34 @@ interface BookPageProps {
   bookId?: string;
   side?: "left" | "right" | "single";
   pageLabel?: string;
+  nightMode?: boolean;
+  textHighlight?: HighlightRange;
+  titleHighlight?: HighlightRange;
 }
 
 const PAGE_BG = "#FFFEF9";
+const NIGHT_BG = "#1e1a14";
+const NIGHT_TEXT = "#e8d5b0";
+
+function HighlightedText({ text, range, night }: { text: string; range?: HighlightRange; night?: boolean }) {
+  if (!range) return <>{text}</>;
+  const { charStart, charEnd } = range;
+  return (
+    <>
+      {text.slice(0, charStart)}
+      <mark style={{
+        background: night ? "rgba(255,209,102,0.35)" : "rgba(108,99,255,0.22)",
+        borderRadius: 3,
+        padding: "0 1px",
+        color: "inherit",
+        display: "inline",
+      }}>
+        {text.slice(charStart, charEnd)}
+      </mark>
+      {text.slice(charEnd)}
+    </>
+  );
+}
 
 function resolveImageUrl(page: BookReaderPage, bookId?: string): string {
   if (!page.imageUrl) {
@@ -100,7 +127,12 @@ export default function BookPage({
   bookId,
   side = "single",
   pageLabel,
+  nightMode,
+  textHighlight,
+  titleHighlight,
 }: BookPageProps) {
+  const pageBg = nightMode ? NIGHT_BG : PAGE_BG;
+  const textColor = nightMode ? NIGHT_TEXT : "#24304A";
   if (page.pageType === "certificate") {
     return <CertificatePage page={page} fontSize={fontSize} fontFamily={fontFamily} />;
   }
@@ -118,7 +150,7 @@ export default function BookPage({
     return (
       <div
         className="relative overflow-hidden select-none"
-        style={{ height: "100%", width: "100%", background: "#000" }}
+        style={{ height: "100%", width: "100%", background: nightMode ? "#111" : "#000" }}
       >
         <Image
           src={imageUrl}
@@ -152,7 +184,7 @@ export default function BookPage({
       style={{
         height: "100%",
         width: "100%",
-        background: PAGE_BG,
+        background: pageBg,
         fontFamily: ff,
         display: "flex",
         flexDirection: "column",
@@ -203,22 +235,24 @@ export default function BookPage({
       >
         {!isCover && page.title && (
           <h2
-            className="font-extrabold text-[#24304A] leading-snug mb-1.5 flex-shrink-0"
+            className="font-extrabold leading-snug mb-1.5 flex-shrink-0"
             style={{
               fontSize: Math.min(fs, 20),
+              color: textColor,
               overflow: "hidden",
               whiteSpace: "nowrap",
               textOverflow: "ellipsis",
             }}
           >
-            {page.title}
+            <HighlightedText text={page.title} range={titleHighlight} night={nightMode} />
           </h2>
         )}
         {page.text && !isCover && (
           <p
-            className="text-[#24304A] flex-1"
+            className="flex-1"
             style={{
               fontSize: fs,
+              color: textColor,
               lineHeight: 1.6,
               overflow: "hidden",
               display: "-webkit-box",
@@ -226,7 +260,7 @@ export default function BookPage({
               WebkitLineClamp: Math.floor((textPercent / 100) * 520 / (fs * 1.6)) - (page.title ? 2 : 0),
             } as React.CSSProperties}
           >
-            {page.text}
+            <HighlightedText text={page.text} range={textHighlight} night={nightMode} />
           </p>
         )}
       </div>

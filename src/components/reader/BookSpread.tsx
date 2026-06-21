@@ -3,6 +3,8 @@
 import type { BookReaderPage, FontSize, FontFamily } from "@/types/reader";
 import BookPage from "./BookPage";
 
+type HighlightProps = { textHighlight?: { charStart: number; charEnd: number }; titleHighlight?: { charStart: number; charEnd: number } };
+
 interface BookSpreadProps {
   leftPage: BookReaderPage | null;
   rightPage: BookReaderPage | null;
@@ -13,6 +15,9 @@ interface BookSpreadProps {
   rightLabel?: string;
   animKey: number;
   animDirection: "next" | "prev" | null;
+  nightMode?: boolean;
+  leftHighlight?: HighlightProps;
+  rightHighlight?: HighlightProps;
 }
 
 export default function BookSpread({
@@ -25,6 +30,9 @@ export default function BookSpread({
   rightLabel,
   animKey,
   animDirection,
+  nightMode,
+  leftHighlight,
+  rightHighlight,
 }: BookSpreadProps) {
   const cls =
     animDirection === "next"
@@ -76,12 +84,14 @@ export default function BookSpread({
               bookId={bookId}
               side="left"
               pageLabel={leftLabel}
+              nightMode={nightMode}
+              {...leftHighlight}
             />
           ) : (
             <div
               style={{
                 height: "100%",
-                background: "#FFFEF9",
+                background: nightMode ? "#1e1a14" : "#FFFEF9",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -127,9 +137,11 @@ export default function BookSpread({
               bookId={bookId}
               side="right"
               pageLabel={rightLabel}
+              nightMode={nightMode}
+              {...rightHighlight}
             />
           ) : (
-            <div style={{ height: "100%", background: "#FFFEF9" }} />
+            <div style={{ height: "100%", background: nightMode ? "#1e1a14" : "#FFFEF9" }} />
           )}
         </div>
 
