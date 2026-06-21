@@ -289,12 +289,11 @@ export default function RealBookReader({
     else if (delta > 48) goPrev();
   }
 
-  // Click zones: left 30% → prev, right 30% → next (center 40% = no action)
+  // Split on viewport center: left half → prev, right half → next
+  // (container-relative % breaks on wide screens where book is capped at 1080px)
   function onSpreadClick(e: React.MouseEvent<HTMLDivElement>) {
-    const { left, width } = e.currentTarget.getBoundingClientRect();
-    const x = (e.clientX - left) / width;
-    if (x < 0.30) goPrev();
-    else if (x > 0.70) goNext();
+    if (e.clientX < window.innerWidth / 2) goPrev();
+    else goNext();
   }
 
   function saveFontSize(s: FontSize) {
