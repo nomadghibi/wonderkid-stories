@@ -14,6 +14,7 @@ import WonderHandHint from "./WonderHandHint";
 
 const LS_SIZE = "wk_font_size_v1";
 const LS_FAMILY = "wk_font_family_v1";
+const TTS_RATES = [0.8, 1, 1.25, 1.5];
 
 interface RealBookReaderProps {
   data: BookReaderData;
@@ -59,8 +60,13 @@ export default function RealBookReader({
   const [approving, setApproving] = useState(false);
   const [submittingFeedback, setSubmittingFeedback] = useState(false);
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
+  const [savedProgress, setSavedProgress] = useState<number | null>(null);
+  const [ttsActive, setTtsActive] = useState(false);
+  const [ttsRate, setTtsRate] = useState(1);
 
   const touchStartX = useRef(0);
+  const goNextRef = useRef<() => void>(() => {});
+  const lsProgress = `wk_progress_${data.id}`;
   const pages = sortPages(data.pages);
   const total = pages.length;
   const isImageOnlyBook = pages.every(p => p.hasEmbeddedText || p.layoutType === "full_page" || p.layoutType === "image_only" || p.pageType === "certificate");
@@ -78,6 +84,14 @@ export default function RealBookReader({
       if (s && FONT_SIZES.includes(s)) setFontSize(s);
       const f = localStorage.getItem(LS_FAMILY) as FontFamily | null;
       if (f && FONT_FAMILIES.includes(f)) setFontFamily(f);
+      const prog = localStorage.getItem(`wk_progress_${data.id}`);
+      if (prog) {
+        const idx = parseInt(prog, 10);
+        if (!isNaN(idx) && idx > 0 && idx < data.pages.length) {
+          setSavedProgress(idx);
+          setCurrentIdx(idx);
+        }
+      }
     } catch { /* private mode */ }
 
     return () => mq.removeEventListener("change", h);
@@ -119,6 +133,56 @@ export default function RealBookReader({
       document.body.style.overflow = "";
     }
     return () => { document.body.style.overflow = ""; };
+  }, [isOpen]);
+
+  // Keep goNextRef current so TTS onend can call it without stale closure
+  useEffect(() => { goNextRef.current = goNext; }, [goNext]);
+
+  // Persist reading progress per book
+  useEffect(() => {
+    if (!mounted) return;
+    try {
+      if (currentIdx > 0) localStorage.setItem(lsProgress, String(currentIdx));
+      else localStorage.removeItem(lsProgress);
+    } catch { /* ignore */ }
+  }, [currentIdx, mounted, lsProgress]);
+
+  // TTS: read current spread aloud, auto-advance when done
+  useEffect(() => {
+    if (!ttsActive || !mounted || typeof window === "undefined") return;
+    window.speechSynthesis.cancel();
+
+    const spread = isMobile ? [pages[currentIdx]] : [pages[currentIdx], pages[currentIdx + 1]];
+    const text = spread
+      .filter(Boolean)
+      .flatMap(p => [p!.title, p!.text].filter(Boolean))
+      .join(". ");
+
+    const atEnd = currentIdx + step >= total;
+    if (!text.trim()) {
+      if (atEnd) setTtsActive(false);
+      else goNextRef.current();
+      return;
+    }
+
+    const utter = new SpeechSynthesisUtterance(text);
+    utter.rate = ttsRate;
+    utter.onend = () => {
+      if (atEnd) setTtsActive(false);
+      else goNextRef.current();
+    };
+    window.speechSynthesis.speak(utter);
+
+    return () => { window.speechSynthesis.cancel(); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ttsActive, currentIdx, ttsRate, mounted, isMobile, step, total]);
+
+  // Stop TTS when reader closes
+  useEffect(() => {
+    if (!isOpen && typeof window !== "undefined") {
+      window.speechSynthesis.cancel();
+      setTtsActive(false);
+    }
   }, [isOpen]);
 
   function onTouchStart(e: React.TouchEvent) {
@@ -249,6 +313,14 @@ export default function RealBookReader({
         onOpen={() => setIsOpen(true)}
         backHref={backHref}
         backLabel={backLabel}
+        resumePageIdx={savedProgress ?? undefined}
+        totalPages={total}
+        onStartOver={savedProgress ? () => {
+          setCurrentIdx(0);
+          setSavedProgress(null);
+          try { localStorage.removeItem(lsProgress); } catch { /* ignore */ }
+          setIsOpen(true);
+        } : undefined}
       />
     );
   }
@@ -316,7 +388,7 @@ export default function RealBookReader({
           )}
         </div>
 
-        {/* Right: font controls (hidden for image-only books — text is baked into images) */}
+        {/* Right: font controls + TTS */}
         <div className="flex items-center gap-2 flex-shrink-0 flex-1 justify-end">
           {isImageOnlyBook ? (
             <span className="text-xs text-gray-400 hidden sm:block" title="Text size is fixed for image pages.">
@@ -326,6 +398,31 @@ export default function RealBookReader({
             <>
               <FontFamilyControls value={fontFamily} onChange={saveFontFamily} />
               <FontSizeControls fontSize={fontSize} onChange={saveFontSize} />
+              <div className="flex items-center gap-1">
+                {ttsActive && (
+                  <select
+                    value={ttsRate}
+                    onChange={e => setTtsRate(Number(e.target.value))}
+                    className="text-xs border border-gray-200 rounded-lg px-1.5 py-1 text-gray-600 focus:outline-none focus:ring-1 focus:ring-[#6C63FF]/30 hidden sm:block"
+                    title="Reading speed"
+                  >
+                    {TTS_RATES.map(r => (
+                      <option key={r} value={r}>{r}×</option>
+                    ))}
+                  </select>
+                )}
+                <button
+                  onClick={() => setTtsActive(a => !a)}
+                  title={ttsActive ? "Stop reading aloud" : "Read aloud"}
+                  className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold transition-all whitespace-nowrap ${
+                    ttsActive
+                      ? "bg-[#6C63FF] text-white shadow-sm"
+                      : "border border-gray-200 text-gray-500 hover:border-[#6C63FF] hover:text-[#6C63FF]"
+                  }`}
+                >
+                  {ttsActive ? "⏸ Stop" : "🔊 Read"}
+                </button>
+              </div>
             </>
           )}
         </div>

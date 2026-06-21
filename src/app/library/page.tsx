@@ -1,12 +1,8 @@
 import Link from "next/link";
 import { createServiceClient } from "@/lib/supabase/server";
 import type { LibraryBook, Subject } from "@/types/library";
+import LibraryGrid from "@/components/library/LibraryGrid";
 
-const READING_LEVEL_LABEL: Record<string, string> = {
-  beginner: "Beginner",
-  early_reader: "Early Reader",
-  reader: "Reader",
-};
 
 export const metadata = {
   title: "Book Library — WonderKid Stories",
@@ -101,92 +97,8 @@ export default async function LibraryPage({
           ))}
         </div>
 
-        {/* Book grid */}
-        {books.length === 0 ? (
-          <div className="text-center py-20 text-gray-400">
-            <div className="text-5xl mb-4">📭</div>
-            <p className="font-semibold">No books in this category yet.</p>
-            <Link href="/library" className="text-[#6C63FF] text-sm font-bold hover:underline mt-2 inline-block">
-              View all books →
-            </Link>
-          </div>
-        ) : (
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {books.map((book) => {
-              const subject = book.subjects as Subject | null;
-              const coverBg = `#${book.cover_color}`;
-              return (
-                <div
-                  key={book.id}
-                  className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden hover:shadow-md transition-all hover:-translate-y-0.5 flex flex-col"
-                >
-                  {/* Cover */}
-                  <div
-                    className="relative overflow-hidden flex items-center justify-center"
-                    style={{
-                      background: `linear-gradient(135deg, ${coverBg}dd, ${coverBg}99)`,
-                      aspectRatio: book.cover_image_url ? "3/4" : "5/3",
-                    }}
-                  >
-                    {book.cover_image_url ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={book.cover_image_url}
-                        alt={book.title}
-                        className="w-full h-full object-contain"
-                      />
-                    ) : (
-                      <div className="text-center text-white px-4">
-                        <div className="text-4xl mb-2">{subject?.emoji ?? "📖"}</div>
-                        <p className="font-extrabold text-sm leading-tight">{book.title}</p>
-                      </div>
-                    )}
-                    {/* Free badge */}
-                    {book.is_free && (
-                      <div className="absolute top-3 right-3 bg-[#06D6A0] text-white text-xs font-extrabold px-2.5 py-1 rounded-full">
-                        FREE
-                      </div>
-                    )}
-                    {/* Subject badge */}
-                    {subject && (
-                      <div className="absolute top-3 left-3 bg-white/80 backdrop-blur-sm text-gray-700 text-xs font-bold px-2.5 py-1 rounded-full">
-                        {subject.emoji} {subject.name}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Info */}
-                  <div className="p-5 flex flex-col flex-1">
-                    <h3 className="font-extrabold text-[#24304A] text-base mb-1 leading-snug">
-                      {book.title}
-                    </h3>
-                    {book.subtitle && (
-                      <p className="text-xs text-[#6C63FF] font-semibold mb-2">{book.subtitle}</p>
-                    )}
-                    <p className="text-sm text-gray-500 line-clamp-2 flex-1 mb-4">
-                      {book.description}
-                    </p>
-
-                    {/* Meta */}
-                    <div className="flex items-center justify-between text-xs text-gray-400 mb-4">
-                      <span>Ages {book.age_min}–{book.age_max}</span>
-                      <span>{READING_LEVEL_LABEL[book.reading_level] ?? book.reading_level}</span>
-                      <span>{book.page_count} pages</span>
-                    </div>
-
-                    {/* CTA */}
-                    <Link
-                      href={`/library/${book.slug}`}
-                      className="block text-center bg-[#6C63FF] hover:bg-[#5A52E0] text-white font-bold py-2.5 rounded-xl text-sm transition-colors"
-                    >
-                      📖 Read Now — Free
-                    </Link>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
+        {/* Book grid — client component so it can read localStorage progress */}
+        <LibraryGrid books={books} />
 
         {/* Upsell strip */}
         <div className="mt-16 bg-[#6C63FF] rounded-2xl p-8 text-center text-white">

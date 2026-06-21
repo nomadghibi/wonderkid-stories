@@ -12,6 +12,9 @@ interface BookCoverProps {
   onOpen: () => void;
   backHref?: string;
   backLabel?: string;
+  resumePageIdx?: number;
+  totalPages?: number;
+  onStartOver?: () => void;
 }
 
 export default function BookCover({
@@ -22,6 +25,9 @@ export default function BookCover({
   onOpen,
   backHref,
   backLabel,
+  resumePageIdx,
+  totalPages,
+  onStartOver,
 }: BookCoverProps) {
   const [hovered, setHovered] = useState(false);
   const placeholder = `https://placehold.co/600x800/6C63FF/FFFFFF?text=${encodeURIComponent(title)}`;
@@ -144,14 +150,39 @@ export default function BookCover({
           </div>
         </div>
 
-        {/* Open button */}
+        {/* Progress bar (shown when reader has saved position) */}
+        {resumePageIdx && totalPages && totalPages > 1 && (
+          <div className="flex flex-col items-center gap-1.5 w-full max-w-xs">
+            <div className="w-full h-1.5 bg-gray-200 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-[#6C63FF] rounded-full transition-all"
+                style={{ width: `${Math.min((resumePageIdx / (totalPages - 1)) * 100, 100)}%` }}
+              />
+            </div>
+            <p className="text-xs text-gray-400">
+              {Math.round((resumePageIdx / (totalPages - 1)) * 100)}% read
+            </p>
+          </div>
+        )}
+
+        {/* Open / Resume button */}
         <button
           onClick={onOpen}
           className="bg-[#6C63FF] hover:bg-[#5A52E0] text-white font-extrabold px-10 py-4 rounded-2xl text-lg transition-all active:scale-95 shadow-xl shadow-purple-200/60 flex items-center gap-2.5 mt-2"
         >
           <span className="text-xl">📖</span>
-          Open Book
+          {resumePageIdx ? "Continue Reading" : "Open Book"}
         </button>
+
+        {/* Start over link when resuming */}
+        {onStartOver && (
+          <button
+            onClick={onStartOver}
+            className="text-xs text-gray-400 hover:text-gray-600 underline underline-offset-2 transition-colors"
+          >
+            Start from beginning
+          </button>
+        )}
 
         <p className="text-gray-400 text-xs text-center">
           Use ← → keys or swipe to turn pages
