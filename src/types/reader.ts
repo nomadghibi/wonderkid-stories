@@ -54,6 +54,7 @@ export interface BookReaderPage {
   text?: string;
   imageUrl?: string;
   layoutType?: string;
+  hasEmbeddedText?: boolean;
 }
 
 export interface BookReaderData {

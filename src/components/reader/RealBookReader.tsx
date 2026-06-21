@@ -63,6 +63,7 @@ export default function RealBookReader({
   const touchStartX = useRef(0);
   const pages = sortPages(data.pages);
   const total = pages.length;
+  const isImageOnlyBook = pages.every(p => p.hasEmbeddedText || p.layoutType === "full_page" || p.layoutType === "image_only" || p.pageType === "certificate");
 
   // Hydration guard — prevents SSR mismatch on isOpen
   useEffect(() => {
@@ -170,14 +171,23 @@ export default function RealBookReader({
     if (isMobile) {
       const p = pages[currentIdx];
       if (!p) return "";
-      const n = storyNum(p);
-      if (n !== undefined) return `Page ${n} of ${totalStory}`;
       if (p.pageType === "cover") return "Cover";
       if (p.pageType === "dedication") return "Dedication";
-      return "Certificate";
+      if (p.pageType === "certificate") return "Certificate";
+      if (isImageOnlyBook) return `Page ${currentIdx} of ${total - 1}`;
+      const n = storyNum(p);
+      if (n !== undefined) return `Page ${n} of ${totalStory}`;
+      return "Reading…";
     }
     const left = pages[currentIdx];
     const right = pages[currentIdx + 1];
+    if (isImageOnlyBook) {
+      const ln = left?.pageType === "cover" ? "Cover" : String(currentIdx);
+      const rn = right ? (right.pageType === "certificate" ? "Certificate" : String(currentIdx + 1)) : null;
+      if (left?.pageType === "cover") return rn ? `Cover & Page 1` : "Cover";
+      if (!right) return `Page ${ln} of ${total - 1}`;
+      return `Pages ${ln}–${rn} of ${total - 1}`;
+    }
     const ln = storyNum(left);
     const rn = storyNum(right);
     if (ln !== undefined && rn !== undefined) return `Pages ${ln}–${rn} of ${totalStory}`;
@@ -305,10 +315,18 @@ export default function RealBookReader({
           )}
         </div>
 
-        {/* Right: font controls */}
+        {/* Right: font controls (hidden for image-only books — text is baked into images) */}
         <div className="flex items-center gap-2 flex-shrink-0 flex-1 justify-end">
-          <FontFamilyControls value={fontFamily} onChange={saveFontFamily} />
-          <FontSizeControls fontSize={fontSize} onChange={saveFontSize} />
+          {isImageOnlyBook ? (
+            <span className="text-xs text-gray-400 hidden sm:block" title="Text size is fixed for image pages.">
+              🖼 Image pages
+            </span>
+          ) : (
+            <>
+              <FontFamilyControls value={fontFamily} onChange={saveFontFamily} />
+              <FontSizeControls fontSize={fontSize} onChange={saveFontSize} />
+            </>
+          )}
         </div>
       </div>
 

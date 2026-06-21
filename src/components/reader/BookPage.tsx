@@ -113,8 +113,8 @@ export default function BookPage({
   const fs = FONT_SIZE_PX[fontSize];
   const ff = fontFamily ? FONT_FAMILY_CSS[fontFamily] : "var(--font-nunito)";
 
-  // Full-page layout: image fills entire page, no text panel (text is already in image)
-  if (page.layoutType === "full_page") {
+  // Image-only / full-page: image fills entire page, no text panel (text embedded in image)
+  if (page.layoutType === "full_page" || page.layoutType === "image_only" || page.hasEmbeddedText) {
     return (
       <div
         className="relative overflow-hidden select-none"

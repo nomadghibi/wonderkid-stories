@@ -1,4 +1,4 @@
-export type BookType = "ready_made" | "variable_personalized" | "ai_custom";
+export type BookType = "ready_made" | "variable_personalized" | "ai_custom" | "ready_made_image_pages";
 export type LibraryPageType = "cover" | "story" | "activity" | "certificate" | "ending" | "dedication";
 export type ReadingLevel = "beginner" | "early_reader" | "reader";
 
@@ -45,6 +45,7 @@ export interface LibraryBookPage {
   image_url: string | null;
   audio_url: string | null;
   layout_type: string;
+  has_embedded_text: boolean;
   created_at: string;
   updated_at: string;
 }
