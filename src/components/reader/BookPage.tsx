@@ -14,6 +14,7 @@ interface BookPageProps {
   side?: "left" | "right" | "single";
   pageLabel?: string;
   nightMode?: boolean;
+  dyslexiaMode?: boolean;
   textHighlight?: HighlightRange;
   titleHighlight?: HighlightRange;
 }
@@ -128,11 +129,18 @@ export default function BookPage({
   side = "single",
   pageLabel,
   nightMode,
+  dyslexiaMode,
   textHighlight,
   titleHighlight,
 }: BookPageProps) {
-  const pageBg = nightMode ? NIGHT_BG : PAGE_BG;
+  const pageBg = nightMode ? NIGHT_BG : dyslexiaMode ? "#FFFDE7" : PAGE_BG;
   const textColor = nightMode ? NIGHT_TEXT : "#24304A";
+  const dyslexiaStyles = dyslexiaMode ? {
+    fontFamily: "var(--font-lexend), sans-serif",
+    letterSpacing: "0.05em",
+    wordSpacing: "0.1em",
+    lineHeight: 1.9,
+  } : {};
   if (page.pageType === "certificate") {
     return <CertificatePage page={page} fontSize={fontSize} fontFamily={fontFamily} />;
   }
@@ -185,7 +193,7 @@ export default function BookPage({
         height: "100%",
         width: "100%",
         background: pageBg,
-        fontFamily: ff,
+        fontFamily: dyslexiaMode ? "var(--font-lexend), sans-serif" : ff,
         display: "flex",
         flexDirection: "column",
       }}
@@ -242,6 +250,7 @@ export default function BookPage({
               overflow: "hidden",
               whiteSpace: "nowrap",
               textOverflow: "ellipsis",
+              ...dyslexiaStyles,
             }}
           >
             <HighlightedText text={page.title} range={titleHighlight} night={nightMode} />
@@ -251,13 +260,14 @@ export default function BookPage({
           <p
             className="flex-1"
             style={{
-              fontSize: fs,
+              fontSize: dyslexiaMode ? fs + 2 : fs,
               color: textColor,
-              lineHeight: 1.6,
+              lineHeight: dyslexiaMode ? 1.9 : 1.6,
               overflow: "hidden",
               display: "-webkit-box",
               WebkitBoxOrient: "vertical",
-              WebkitLineClamp: Math.floor((textPercent / 100) * 520 / (fs * 1.6)) - (page.title ? 2 : 0),
+              WebkitLineClamp: Math.floor((textPercent / 100) * 520 / ((dyslexiaMode ? fs + 2 : fs) * (dyslexiaMode ? 1.9 : 1.6))) - (page.title ? 2 : 0),
+              ...dyslexiaStyles,
             } as React.CSSProperties}
           >
             <HighlightedText text={page.text} range={textHighlight} night={nightMode} />

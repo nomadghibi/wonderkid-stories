@@ -9,6 +9,7 @@ const SHORTCUTS = [
   { key: "→ / ←",  action: "Next / Previous page" },
   { key: "R",       action: "Toggle read aloud" },
   { key: "N",       action: "Toggle night mode" },
+  { key: "D",       action: "Toggle dyslexia-friendly mode" },
   { key: "F",       action: "Toggle fullscreen" },
   { key: "B",       action: "Bookmark current page" },
   { key: "Esc",     action: "Back to library" },

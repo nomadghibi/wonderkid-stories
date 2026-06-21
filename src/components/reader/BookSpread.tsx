@@ -16,6 +16,7 @@ interface BookSpreadProps {
   animKey: number;
   animDirection: "next" | "prev" | null;
   nightMode?: boolean;
+  dyslexiaMode?: boolean;
   leftHighlight?: HighlightProps;
   rightHighlight?: HighlightProps;
 }
@@ -31,6 +32,7 @@ export default function BookSpread({
   animKey,
   animDirection,
   nightMode,
+  dyslexiaMode,
   leftHighlight,
   rightHighlight,
 }: BookSpreadProps) {
@@ -85,6 +87,7 @@ export default function BookSpread({
               side="left"
               pageLabel={leftLabel}
               nightMode={nightMode}
+              dyslexiaMode={dyslexiaMode}
               {...leftHighlight}
             />
           ) : (
@@ -138,6 +141,7 @@ export default function BookSpread({
               side="right"
               pageLabel={rightLabel}
               nightMode={nightMode}
+              dyslexiaMode={dyslexiaMode}
               {...rightHighlight}
             />
           ) : (

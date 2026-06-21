@@ -21,6 +21,7 @@ import ShortcutModal from "./ShortcutModal";
 const LS_SIZE = "wk_font_size_v1";
 const LS_FAMILY = "wk_font_family_v1";
 const LS_NIGHT = "wk_night_mode";
+const LS_DYSLEXIA = "wk_dyslexia";
 const TTS_RATES = [0.8, 1, 1.25, 1.5];
 
 interface TtsHighlight {
@@ -80,6 +81,7 @@ export default function RealBookReader({
   const [ttsHighlight, setTtsHighlight] = useState<TtsHighlight | null>(null);
   const [streakCount, setStreakCount] = useState<number | null>(null);
   const [nightMode, setNightMode] = useState(false);
+  const [dyslexiaMode, setDyslexiaMode] = useState(false);
   const [bookmarks, setBookmarks] = useState<number[]>([]);
   const [showBookmarks, setShowBookmarks] = useState(false);
   const [showCompletion, setShowCompletion] = useState(false);
@@ -124,6 +126,7 @@ export default function RealBookReader({
         }
       }
       if (localStorage.getItem(LS_NIGHT) === "1") setNightMode(true);
+      if (localStorage.getItem(LS_DYSLEXIA) === "1") setDyslexiaMode(true);
       const bms = localStorage.getItem(`wk_bookmarks_${data.id}`);
       if (bms) setBookmarks(JSON.parse(bms) as number[]);
     } catch { /* private mode */ }
@@ -162,6 +165,7 @@ export default function RealBookReader({
     }
     else if (e.key === "f" || e.key === "F") toggleFullscreen();
     else if (e.key === "n" || e.key === "N") setNightMode(m => !m);
+    else if (e.key === "d" || e.key === "D") setDyslexiaMode(m => !m);
     else if (e.key === "b" || e.key === "B") toggleBookmark();
     else if (e.key === "r" || e.key === "R") setTtsActive(a => !a);
     else if (e.key === "?") setShowShortcuts(s => !s);
@@ -282,6 +286,12 @@ export default function RealBookReader({
     if (!mounted) return;
     try { localStorage.setItem(LS_NIGHT, nightMode ? "1" : "0"); } catch { /* ignore */ }
   }, [nightMode, mounted]);
+
+  // Persist dyslexia mode preference
+  useEffect(() => {
+    if (!mounted) return;
+    try { localStorage.setItem(LS_DYSLEXIA, dyslexiaMode ? "1" : "0"); } catch { /* ignore */ }
+  }, [dyslexiaMode, mounted]);
 
   // Session tracking for reading stats
   useEffect(() => {
@@ -693,6 +703,20 @@ export default function RealBookReader({
             <option value="12">Fast</option>
           </select>
 
+          {/* Dyslexia mode */}
+          <button
+            onClick={() => setDyslexiaMode(d => !d)}
+            title={dyslexiaMode ? "Turn off dyslexia-friendly mode (D)" : "Dyslexia-friendly reading mode (D)"}
+            className="text-xs font-extrabold px-2 py-1 rounded-lg border transition-all hidden sm:block"
+            style={{
+              borderColor: dyslexiaMode ? "#06D6A0" : (nightMode ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.1)"),
+              color: dyslexiaMode ? "#06D6A0" : (nightMode ? "#a89070" : "#6b7280"),
+              background: dyslexiaMode ? "rgba(6,214,160,0.08)" : (nightMode ? "rgba(255,255,255,0.06)" : "transparent"),
+            }}
+          >
+            Aa
+          </button>
+
           {/* Night mode */}
           <button
             onClick={() => setNightMode(n => !n)}
@@ -823,6 +847,7 @@ export default function RealBookReader({
                 side="single"
                 pageLabel={pageLabel(mobilePage)}
                 nightMode={nightMode}
+                dyslexiaMode={dyslexiaMode}
                 {...pageHighlightProps(mobilePage, currentIdx)}
               />
             )}
@@ -840,6 +865,7 @@ export default function RealBookReader({
             animKey={animKey}
             animDirection={animDir}
             nightMode={nightMode}
+            dyslexiaMode={dyslexiaMode}
             leftHighlight={pageHighlightProps(leftPage, currentIdx)}
             rightHighlight={pageHighlightProps(rightPage, currentIdx + 1)}
           />
