@@ -11,6 +11,7 @@ import FontSizeControls from "./FontSizeControls";
 import FontFamilyControls from "./FontFamilyControls";
 import ReaderProgress from "./ReaderProgress";
 import WonderHandHint from "./WonderHandHint";
+import { updateStreak } from "@/lib/streak";
 
 const LS_SIZE = "wk_font_size_v1";
 const LS_FAMILY = "wk_font_family_v1";
@@ -63,6 +64,7 @@ export default function RealBookReader({
   const [savedProgress, setSavedProgress] = useState<number | null>(null);
   const [ttsActive, setTtsActive] = useState(false);
   const [ttsRate, setTtsRate] = useState(1);
+  const [streakCount, setStreakCount] = useState<number | null>(null);
 
   const touchStartX = useRef(0);
   const goNextRef = useRef<() => void>(() => {});
@@ -184,6 +186,18 @@ export default function RealBookReader({
       setTtsActive(false);
     }
   }, [isOpen]);
+
+  // Update reading streak when reader opens for the first time this session
+  const streakUpdatedRef = useRef(false);
+  useEffect(() => {
+    if (isOpen && mounted && !streakUpdatedRef.current) {
+      streakUpdatedRef.current = true;
+      try {
+        const data = updateStreak();
+        setStreakCount(data.count);
+      } catch { /* ignore */ }
+    }
+  }, [isOpen, mounted]);
 
   function onTouchStart(e: React.TouchEvent) {
     touchStartX.current = e.touches[0].clientX;
@@ -361,6 +375,14 @@ export default function RealBookReader({
           </span>
           {data.childName && (
             <span className="text-xs text-gray-400 hidden md:block">· {data.childName}</span>
+          )}
+          {streakCount && streakCount > 0 && (
+            <span
+              className="hidden md:inline-flex items-center gap-1 text-xs font-bold text-orange-500 bg-orange-50 border border-orange-100 px-2 py-0.5 rounded-full flex-shrink-0"
+              title={`${streakCount}-day reading streak`}
+            >
+              🔥 {streakCount}
+            </span>
           )}
         </div>
 

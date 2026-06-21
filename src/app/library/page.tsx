@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createServiceClient } from "@/lib/supabase/server";
 import type { LibraryBook, Subject } from "@/types/library";
 import LibraryGrid from "@/components/library/LibraryGrid";
+import StreakBadge from "@/components/library/StreakBadge";
 
 
 export const metadata = {
@@ -64,9 +65,10 @@ export default async function LibraryPage({
           <h1 className="text-4xl md:text-5xl font-extrabold text-[#24304A] mb-4 leading-tight">
             The WonderKid Library
           </h1>
-          <p className="text-lg text-gray-500 max-w-lg mx-auto">
+          <p className="text-lg text-gray-500 max-w-lg mx-auto mb-5">
             Beautiful ready-made storybooks. Open any book and start reading right now — no account needed.
           </p>
+          <StreakBadge />
         </div>
 
         {/* Subject filter */}
