@@ -23,6 +23,15 @@ const CATEGORY_BADGE: Record<string, { bg: string; color: string }> = {
   Animals:   { bg: "#FFE4E6", color: "#9F1239" },
 };
 
+const CARD_GRADIENT: Record<string, string> = {
+  Sports:    "linear-gradient(135deg, #d1fae5 0%, #6ee7b7 100%)",
+  Fantasy:   "linear-gradient(135deg, #ede9fe 0%, #c4b5fd 100%)",
+  Adventure: "linear-gradient(135deg, #dbeafe 0%, #93c5fd 100%)",
+  Science:   "linear-gradient(135deg, #fef9c3 0%, #fde047 100%)",
+  Animals:   "linear-gradient(135deg, #ffe4e6 0%, #fda4af 100%)",
+  default:   "linear-gradient(135deg, #ede9fe 0%, #a5b4fc 100%)",
+};
+
 const STEPS = [
   { n: "1", icon: "🎭", title: "Pick an adventure",  desc: "Choose the theme that fits your child's personality." },
   { n: "2", icon: "👧", title: "Add your child",     desc: "Name, age, photo, favorites — takes 2 minutes." },
@@ -108,25 +117,65 @@ export default async function ThemesPage() {
           </div>
         </div>
 
-        {/* Right: cover collage */}
-        {heroCovers.length >= 2 && (
-          <div className="hidden md:grid grid-cols-2 gap-4">
-            {heroCovers.map((t, i) => (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                key={t.id}
-                src={t.sample_cover_url!}
-                alt={t.title}
-                className="w-full rounded-2xl shadow-xl object-cover"
+        {/* Right: cover collage or decorative fallback */}
+        <div className="hidden md:flex items-center justify-center">
+          {heroCovers.length >= 2 ? (
+            <div className="grid grid-cols-2 gap-4">
+              {heroCovers.map((t, i) => (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  key={t.id}
+                  src={t.sample_cover_url!}
+                  alt={t.title}
+                  className="w-full rounded-2xl shadow-xl object-cover"
+                  style={{ aspectRatio: "3/4", transform: i % 2 === 0 ? "rotate(-2deg)" : "rotate(1.5deg)" }}
+                />
+              ))}
+            </div>
+          ) : (
+            /* Decorative book mockup when no cover images available */
+            <div className="relative w-80 h-96 flex items-center justify-center">
+              {/* Back book */}
+              <div
+                className="absolute rounded-2xl shadow-2xl"
                 style={{
-                  aspectRatio: "3/4",
-                  transform: i % 2 === 0 ? "rotate(-2deg)" : "rotate(1.5deg)",
-                  transition: "transform 0.3s",
+                  width: 200, height: 260,
+                  background: "linear-gradient(135deg, #A594FF 0%, #6C63FF 100%)",
+                  transform: "rotate(-8deg) translateX(-20px) translateY(10px)",
                 }}
               />
-            ))}
-          </div>
-        )}
+              {/* Middle book */}
+              <div
+                className="absolute rounded-2xl shadow-2xl flex items-center justify-center"
+                style={{
+                  width: 200, height: 260,
+                  background: "linear-gradient(135deg, #FFD166 0%, #F59E0B 100%)",
+                  transform: "rotate(4deg) translateX(15px)",
+                }}
+              >
+                <span className="text-6xl">🌲</span>
+              </div>
+              {/* Front book */}
+              <div
+                className="absolute rounded-2xl shadow-2xl flex flex-col items-center justify-center gap-3"
+                style={{
+                  width: 200, height: 260,
+                  background: "linear-gradient(135deg, #06D6A0 0%, #059669 100%)",
+                  transform: "rotate(-2deg) translateX(-5px) translateY(-8px)",
+                }}
+              >
+                <span className="text-6xl">🚀</span>
+                <div className="text-white text-center px-4">
+                  <p className="font-extrabold text-sm leading-tight">Zoe&apos;s Space Adventure</p>
+                  <p className="text-xs text-white/70 mt-1">A story just for her</p>
+                </div>
+              </div>
+              {/* Sparkles */}
+              <div className="absolute -top-4 -right-2 text-3xl animate-bounce" style={{ animationDuration: "2s" }}>✨</div>
+              <div className="absolute -bottom-2 -left-4 text-2xl animate-bounce" style={{ animationDuration: "2.5s", animationDelay: "0.5s" }}>⭐</div>
+            </div>
+          )}
+        </div>
       </section>
 
       {/* ── Template grid ────────────────────────────────────────────────── */}
@@ -162,9 +211,9 @@ export default async function ThemesPage() {
                   ) : (
                     <div
                       className="w-full h-full flex items-center justify-center"
-                      style={{ background: `${badge.bg}` }}
+                      style={{ background: CARD_GRADIENT[template.category ?? ""] ?? CARD_GRADIENT.default }}
                     >
-                      <span className="text-[96px] leading-none">{emoji}</span>
+                      <span className="text-[96px] leading-none drop-shadow-md">{emoji}</span>
                     </div>
                   )}
 
