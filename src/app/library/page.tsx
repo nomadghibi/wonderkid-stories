@@ -3,6 +3,7 @@ import { createServiceClient } from "@/lib/supabase/server";
 import type { LibraryBook, Subject } from "@/types/library";
 import LibraryGrid from "@/components/library/LibraryGrid";
 import StreakBadge from "@/components/library/StreakBadge";
+import GoalWidget from "@/components/library/GoalWidget";
 
 
 export const metadata = {
@@ -74,7 +75,10 @@ export default async function LibraryPage({
           <p className="text-lg text-gray-500 max-w-lg mx-auto mb-5">
             Beautiful ready-made storybooks. Open any book and start reading right now — no account needed.
           </p>
-          <StreakBadge />
+          <div className="flex flex-wrap items-center justify-center gap-3 mt-1">
+            <StreakBadge />
+            <GoalWidget />
+          </div>
         </div>
 
         {/* Subject filter */}

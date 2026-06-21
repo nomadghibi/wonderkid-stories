@@ -10,6 +10,8 @@ interface PostBookScreenProps {
   mode: string;
   templateSlug?: string;
   backHref?: string;
+  hasQuiz?: boolean;
+  onTakeQuiz?: () => void;
   onReadAgain: () => void;
   onDismiss: () => void;
 }
@@ -56,7 +58,7 @@ function Confetti() {
 }
 
 export default function PostBookScreen({
-  title, newAchievements, mode, templateSlug, backHref, onReadAgain, onDismiss,
+  title, newAchievements, mode, templateSlug, backHref, hasQuiz, onTakeQuiz, onReadAgain, onDismiss,
 }: PostBookScreenProps) {
   return (
     <>
@@ -90,6 +92,15 @@ export default function PostBookScreen({
 
           {/* Actions */}
           <div className="flex flex-col gap-2.5">
+            {hasQuiz && onTakeQuiz && (
+              <button
+                onClick={onTakeQuiz}
+                className="w-full py-3 rounded-xl text-white font-extrabold text-sm transition-colors"
+                style={{ background: "#6C63FF" }}
+              >
+                📝 Take the Quiz!
+              </button>
+            )}
             <button
               onClick={onReadAgain}
               className="w-full py-3 rounded-xl border-2 border-[#6C63FF] text-[#6C63FF] font-bold text-sm hover:bg-[#6C63FF]/5 transition-colors"

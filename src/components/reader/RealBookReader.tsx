@@ -16,7 +16,9 @@ import { addSession, finishBook, getStats } from "@/lib/stats";
 import { checkAndUnlock, getUnlocked, type Achievement } from "@/lib/achievements";
 import AchievementToast from "./AchievementToast";
 import PostBookScreen from "./PostBookScreen";
+import QuizScreen from "./QuizScreen";
 import ShortcutModal from "./ShortcutModal";
+import { saveQuizResult } from "@/lib/bookQuizzes";
 
 const LS_SIZE = "wk_font_size_v1";
 const LS_FAMILY = "wk_font_family_v1";
@@ -90,6 +92,7 @@ export default function RealBookReader({
   const [autoProgress, setAutoProgress] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showShortcuts, setShowShortcuts] = useState(false);
+  const [showQuiz, setShowQuiz] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
 
   const touchStartX = useRef(0);
@@ -1033,18 +1036,36 @@ export default function RealBookReader({
         </div>
       )}
 
+      {/* ── Comprehension quiz ────────────────────────────────────────────── */}
+      {showQuiz && (data.quizQuestions?.length ?? 0) > 0 && (
+        <QuizScreen
+          questions={data.quizQuestions!}
+          bookTitle={data.title}
+          bookId={data.id}
+          nightMode={nightMode}
+          onDone={(score, total) => {
+            try { saveQuizResult(data.id, score, total); } catch { /* ignore */ }
+            setShowQuiz(false);
+          }}
+          onSkip={() => setShowQuiz(false)}
+        />
+      )}
+
       {/* ── Post-book completion screen ───────────────────────────────────── */}
-      {showCompletion && (
+      {showCompletion && !showQuiz && (
         <PostBookScreen
           title={data.title}
           newAchievements={newAchievements}
           mode={data.mode}
           templateSlug={data.templateSlug}
           backHref={backHref}
+          hasQuiz={(data.quizQuestions?.length ?? 0) > 0}
+          onTakeQuiz={() => setShowQuiz(true)}
           onReadAgain={() => {
             setCurrentIdx(0);
             setAnimDir(null);
             setShowCompletion(false);
+            setShowQuiz(false);
             setNewAchievements([]);
             completionFiredRef.current = false;
           }}

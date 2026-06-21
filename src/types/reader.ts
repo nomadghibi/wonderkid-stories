@@ -65,4 +65,6 @@ export interface BookReaderData {
   mode: ReaderMode;
   templateSlug?: string;
   pages: BookReaderPage[];
+  slug?: string;
+  quizQuestions?: import("@/lib/bookQuizzes").QuizQuestion[];
 }

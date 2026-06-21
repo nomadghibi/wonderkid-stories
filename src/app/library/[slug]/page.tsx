@@ -3,6 +3,7 @@ import { createServiceClient } from "@/lib/supabase/server";
 import RealBookReader from "@/components/reader/RealBookReader";
 import type { BookReaderData, BookReaderPage } from "@/types/reader";
 import type { LibraryBookWithPages } from "@/types/library";
+import { getQuiz } from "@/lib/bookQuizzes";
 
 type Params = { params: Promise<{ slug: string }> };
 
@@ -57,6 +58,8 @@ export default async function LibraryBookReaderPage({ params }: Params) {
     coverImageUrl: coverPage?.imageUrl,
     mode: "library",
     pages: readerPages,
+    slug: book.slug,
+    quizQuestions: getQuiz(book.slug),
   };
 
   return (
