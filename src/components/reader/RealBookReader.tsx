@@ -12,7 +12,10 @@ import FontFamilyControls from "./FontFamilyControls";
 import ReaderProgress from "./ReaderProgress";
 import WonderHandHint from "./WonderHandHint";
 import { updateStreak } from "@/lib/streak";
-import { addSession } from "@/lib/stats";
+import { addSession, finishBook, getStats } from "@/lib/stats";
+import { checkAndUnlock, getUnlocked, type Achievement } from "@/lib/achievements";
+import AchievementToast from "./AchievementToast";
+import PostBookScreen from "./PostBookScreen";
 
 const LS_SIZE = "wk_font_size_v1";
 const LS_FAMILY = "wk_font_family_v1";
@@ -78,9 +81,15 @@ export default function RealBookReader({
   const [nightMode, setNightMode] = useState(false);
   const [bookmarks, setBookmarks] = useState<number[]>([]);
   const [showBookmarks, setShowBookmarks] = useState(false);
+  const [showCompletion, setShowCompletion] = useState(false);
+  const [newAchievements, setNewAchievements] = useState<Achievement[]>([]);
+  const [autoRate, setAutoRate] = useState<number | null>(null);
+  const [autoProgress, setAutoProgress] = useState(0);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   const touchStartX = useRef(0);
   const goNextRef = useRef<() => void>(() => {});
+  const autoTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const sessionStartRef = useRef(0);
   const pagesReadRef = useRef(0);
   const wasOpenRef = useRef(false);
@@ -122,7 +131,10 @@ export default function RealBookReader({
   const step = isMobile ? 1 : 2;
 
   const goNext = useCallback(() => {
-    if (currentIdx + step >= total) return;
+    if (currentIdx + step >= total) {
+      setShowCompletion(true);
+      return;
+    }
     setAnimDir("next");
     setAnimKey(k => k + 1);
     setCurrentIdx(i => Math.min(i + step, total - 1));
@@ -268,9 +280,22 @@ export default function RealBookReader({
       wasOpenRef.current = false;
       const seconds = Math.round((Date.now() - sessionStartRef.current) / 1000);
       if (seconds > 5) {
-        try { addSession(pagesReadRef.current, seconds); } catch { /* ignore */ }
+        try {
+          const updated = addSession(pagesReadRef.current, seconds);
+          const streak = streakCount ?? 0;
+          const newly = checkAndUnlock({
+            sessions: updated.totalSessions,
+            pagesRead: updated.totalPagesRead,
+            booksFinished: updated.booksFinished,
+            streakCount: streak,
+            nightMode,
+            hasBookmark: bookmarks.length > 0,
+          });
+          if (newly.length > 0) setNewAchievements(prev => [...prev, ...newly]);
+        } catch { /* ignore */ }
       }
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, mounted]);
 
   // Count pages turned in this session
@@ -279,6 +304,71 @@ export default function RealBookReader({
     pagesReadRef.current += step;
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentIdx]);
+
+  // Fullscreen API sync
+  useEffect(() => {
+    const handler = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener("fullscreenchange", handler);
+    return () => document.removeEventListener("fullscreenchange", handler);
+  }, []);
+
+  // Auto-advance timer — reset on page change, pause during TTS
+  useEffect(() => {
+    if (autoTimerRef.current) clearInterval(autoTimerRef.current);
+    setAutoProgress(0);
+    if (!autoRate || !isOpen || ttsActive) return;
+
+    const tickMs = 100;
+    const totalTicks = (autoRate * 1000) / tickMs;
+    let tick = 0;
+    autoTimerRef.current = setInterval(() => {
+      tick++;
+      setAutoProgress((tick / totalTicks) * 100);
+      if (tick >= totalTicks) {
+        clearInterval(autoTimerRef.current!);
+        goNextRef.current();
+      }
+    }, tickMs);
+
+    return () => { if (autoTimerRef.current) clearInterval(autoTimerRef.current); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoRate, currentIdx, isOpen, ttsActive]);
+
+  // Achievement checks — run whenever relevant state changes
+  useEffect(() => {
+    if (!mounted) return;
+    const stats = getStats();
+    const newly = checkAndUnlock({
+      sessions: stats.totalSessions,
+      pagesRead: stats.totalPagesRead,
+      booksFinished: stats.booksFinished,
+      streakCount: streakCount ?? 0,
+      nightMode,
+      hasBookmark: bookmarks.length > 0,
+    });
+    if (newly.length > 0) setNewAchievements(prev => [...prev, ...newly]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mounted, streakCount, nightMode, bookmarks.length]);
+
+  // When completion screen shows, record book finished + check achievements
+  const completionFiredRef = useRef(false);
+  useEffect(() => {
+    if (!showCompletion || !mounted || completionFiredRef.current) return;
+    completionFiredRef.current = true;
+    try {
+      const updated = finishBook();
+      const newly = checkAndUnlock({
+        sessions: updated.totalSessions,
+        pagesRead: updated.totalPagesRead,
+        booksFinished: updated.booksFinished,
+        streakCount: streakCount ?? 0,
+        nightMode,
+        hasBookmark: bookmarks.length > 0,
+      });
+      if (newly.length > 0) setNewAchievements(prev => [...prev, ...newly]);
+    } catch { /* ignore */ }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showCompletion, mounted]);
 
   function onTouchStart(e: React.TouchEvent) {
     touchStartX.current = e.touches[0].clientX;
@@ -382,6 +472,30 @@ export default function RealBookReader({
       setFeedbackOpen(false);
       setFeedbackText("");
     } finally { setSubmittingFeedback(false); }
+  }
+
+  function toggleFullscreen() {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
+    } else {
+      document.exitFullscreen().catch(() => {});
+    }
+  }
+
+  function handleBookFinished() {
+    try {
+      const updated = finishBook();
+      const streak = streakCount ?? 0;
+      const newly = checkAndUnlock({
+        sessions: updated.totalSessions,
+        pagesRead: updated.totalPagesRead,
+        booksFinished: updated.booksFinished,
+        streakCount: streak,
+        nightMode,
+        hasBookmark: bookmarks.length > 0,
+      });
+      return newly;
+    } catch { return []; }
   }
 
   function toggleBookmark() {
@@ -516,6 +630,25 @@ export default function RealBookReader({
 
         {/* Right: night mode + font controls + TTS */}
         <div className="flex items-center gap-2 flex-shrink-0 flex-1 justify-end">
+          {/* Auto-advance */}
+          <select
+            value={autoRate ?? "off"}
+            onChange={e => setAutoRate(e.target.value === "off" ? null : Number(e.target.value))}
+            title="Auto-advance speed"
+            className="text-xs border rounded-lg px-1.5 py-1 focus:outline-none hidden sm:block"
+            style={{
+              borderColor: autoRate ? "#6C63FF" : (nightMode ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.1)"),
+              color: autoRate ? "#6C63FF" : (nightMode ? "#a89070" : "#6b7280"),
+              background: nightMode ? "rgba(255,255,255,0.06)" : "white",
+            }}
+          >
+            <option value="off">⏱ Off</option>
+            <option value="40">Slow</option>
+            <option value="25">Normal</option>
+            <option value="12">Fast</option>
+          </select>
+
+          {/* Night mode */}
           <button
             onClick={() => setNightMode(n => !n)}
             title={nightMode ? "Switch to day mode" : "Switch to night mode"}
@@ -526,6 +659,19 @@ export default function RealBookReader({
             }}
           >
             {nightMode ? "☀️" : "🌙"}
+          </button>
+
+          {/* Fullscreen */}
+          <button
+            onClick={toggleFullscreen}
+            title={isFullscreen ? "Exit fullscreen" : "Enter fullscreen"}
+            className="text-base leading-none px-2 py-1 rounded-lg border transition-all hidden sm:block"
+            style={{
+              borderColor: nightMode ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.1)",
+              background: nightMode ? "rgba(255,255,255,0.06)" : "transparent",
+            }}
+          >
+            {isFullscreen ? "⊡" : "⛶"}
           </button>
 
           {isImageOnlyBook ? (
@@ -640,6 +786,16 @@ export default function RealBookReader({
           />
         )}
       </div>
+
+      {/* ── Auto-advance progress bar ─────────────────────────────────────── */}
+      {autoRate && autoProgress > 0 && (
+        <div className="flex-shrink-0 h-0.5" style={{ background: nightMode ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.04)" }}>
+          <div
+            className="h-full bg-[#6C63FF] transition-none"
+            style={{ width: `${autoProgress}%` }}
+          />
+        </div>
+      )}
 
       {/* ── Navigation bar ────────────────────────────────────────────────── */}
       <div
@@ -790,6 +946,36 @@ export default function RealBookReader({
             </div>
           </div>
         </div>
+      )}
+
+      {/* ── Post-book completion screen ───────────────────────────────────── */}
+      {showCompletion && (
+        <PostBookScreen
+          title={data.title}
+          newAchievements={newAchievements}
+          mode={data.mode}
+          templateSlug={data.templateSlug}
+          backHref={backHref}
+          onReadAgain={() => {
+            setCurrentIdx(0);
+            setAnimDir(null);
+            setShowCompletion(false);
+            setNewAchievements([]);
+            completionFiredRef.current = false;
+          }}
+          onDismiss={() => {
+            setShowCompletion(false);
+            setNewAchievements([]);
+          }}
+        />
+      )}
+
+      {/* ── Achievement toast ─────────────────────────────────────────────── */}
+      {!showCompletion && newAchievements.length > 0 && (
+        <AchievementToast
+          achievements={newAchievements}
+          onDone={() => setNewAchievements([])}
+        />
       )}
 
       {/* ── Mode action bar ───────────────────────────────────────────────── */}
