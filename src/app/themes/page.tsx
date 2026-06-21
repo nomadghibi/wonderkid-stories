@@ -39,6 +39,51 @@ const STEPS = [
   { n: "4", icon: "📥", title: "Read & download",    desc: "Read online instantly, approve, then download your PDF." },
 ];
 
+function BookStack() {
+  return (
+    <div className="relative w-80 h-96 flex items-center justify-center select-none">
+      {/* Back book */}
+      <div
+        className="absolute rounded-2xl shadow-2xl"
+        style={{
+          width: 200, height: 260,
+          background: "linear-gradient(135deg, #A594FF 0%, #6C63FF 100%)",
+          transform: "rotate(-8deg) translateX(-20px) translateY(10px)",
+        }}
+      />
+      {/* Middle book */}
+      <div
+        className="absolute rounded-2xl shadow-2xl flex items-center justify-center"
+        style={{
+          width: 200, height: 260,
+          background: "linear-gradient(135deg, #FFD166 0%, #F59E0B 100%)",
+          transform: "rotate(4deg) translateX(15px)",
+        }}
+      >
+        <span className="text-6xl">🌲</span>
+      </div>
+      {/* Front book */}
+      <div
+        className="absolute rounded-2xl shadow-2xl flex flex-col items-center justify-center gap-3"
+        style={{
+          width: 200, height: 260,
+          background: "linear-gradient(135deg, #06D6A0 0%, #059669 100%)",
+          transform: "rotate(-2deg) translateX(-5px) translateY(-8px)",
+        }}
+      >
+        <span className="text-6xl">🚀</span>
+        <div className="text-white text-center px-4">
+          <p className="font-extrabold text-sm leading-tight">Zoe&#39;s Space Adventure</p>
+          <p className="text-xs text-white/70 mt-1">A story just for her</p>
+        </div>
+      </div>
+      {/* Sparkles */}
+      <span className="absolute -top-4 -right-2 text-3xl">✨</span>
+      <span className="absolute -bottom-2 -left-4 text-2xl">⭐</span>
+    </div>
+  );
+}
+
 export default async function ThemesPage() {
   const supabase = await createServiceClient();
   const { data: templates } = await supabase
@@ -117,7 +162,7 @@ export default async function ThemesPage() {
           </div>
         </div>
 
-        {/* Right: cover collage or decorative fallback */}
+        {/* Right: cover collage or decorative book stack */}
         <div className="hidden md:flex items-center justify-center">
           {heroCovers.length >= 2 ? (
             <div className="grid grid-cols-2 gap-4">
@@ -133,47 +178,7 @@ export default async function ThemesPage() {
               ))}
             </div>
           ) : (
-            /* Decorative book mockup when no cover images available */
-            <div className="relative w-80 h-96 flex items-center justify-center">
-              {/* Back book */}
-              <div
-                className="absolute rounded-2xl shadow-2xl"
-                style={{
-                  width: 200, height: 260,
-                  background: "linear-gradient(135deg, #A594FF 0%, #6C63FF 100%)",
-                  transform: "rotate(-8deg) translateX(-20px) translateY(10px)",
-                }}
-              />
-              {/* Middle book */}
-              <div
-                className="absolute rounded-2xl shadow-2xl flex items-center justify-center"
-                style={{
-                  width: 200, height: 260,
-                  background: "linear-gradient(135deg, #FFD166 0%, #F59E0B 100%)",
-                  transform: "rotate(4deg) translateX(15px)",
-                }}
-              >
-                <span className="text-6xl">🌲</span>
-              </div>
-              {/* Front book */}
-              <div
-                className="absolute rounded-2xl shadow-2xl flex flex-col items-center justify-center gap-3"
-                style={{
-                  width: 200, height: 260,
-                  background: "linear-gradient(135deg, #06D6A0 0%, #059669 100%)",
-                  transform: "rotate(-2deg) translateX(-5px) translateY(-8px)",
-                }}
-              >
-                <span className="text-6xl">🚀</span>
-                <div className="text-white text-center px-4">
-                  <p className="font-extrabold text-sm leading-tight">Zoe&apos;s Space Adventure</p>
-                  <p className="text-xs text-white/70 mt-1">A story just for her</p>
-                </div>
-              </div>
-              {/* Sparkles */}
-              <div className="absolute -top-4 -right-2 text-3xl animate-bounce" style={{ animationDuration: "2s" }}>✨</div>
-              <div className="absolute -bottom-2 -left-4 text-2xl animate-bounce" style={{ animationDuration: "2.5s", animationDelay: "0.5s" }}>⭐</div>
-            </div>
+            <BookStack />
           )}
         </div>
       </section>
