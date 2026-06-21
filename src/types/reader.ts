@@ -1,4 +1,4 @@
-export type ReaderMode = "sample" | "review" | "final";
+export type ReaderMode = "sample" | "review" | "final" | "library";
 
 export type FontFamily = "nunito" | "lexend" | "abeezee" | "andika" | "fredoka";
 

@@ -18,9 +18,10 @@ interface ReaderToolbarProps {
 }
 
 const MODE_BADGE: Record<ReaderMode, { label: string; color: string }> = {
-  sample: { label: "Preview", color: "bg-[#FFD166]/30 text-yellow-700" },
-  review: { label: "Review", color: "bg-purple-100 text-[#6C63FF]" },
-  final: { label: "Approved", color: "bg-green-100 text-green-700" },
+  library: { label: "Free Library", color: "bg-blue-100 text-blue-700" },
+  sample:  { label: "Preview",      color: "bg-[#FFD166]/30 text-yellow-700" },
+  review:  { label: "Review",       color: "bg-purple-100 text-[#6C63FF]" },
+  final:   { label: "Approved",     color: "bg-green-100 text-green-700" },
 };
 
 export default function ReaderToolbar({

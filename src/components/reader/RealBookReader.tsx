@@ -283,6 +283,11 @@ export default function RealBookReader({
 
         {/* Center: mode badge */}
         <div className="flex-shrink-0 mx-3">
+          {data.mode === "library" && (
+            <span className="text-xs font-bold bg-blue-100 text-blue-700 px-2.5 py-1 rounded-full">
+              Free Library
+            </span>
+          )}
           {data.mode === "sample" && (
             <span className="text-xs font-bold bg-[#FFD166]/30 text-yellow-700 px-2.5 py-1 rounded-full">
               Preview
@@ -505,6 +510,40 @@ function ActionBar({
     padding: "10px 16px",
     flexShrink: 0,
   };
+
+  if (mode === "library") {
+    return (
+      <div style={baseStyle}>
+        <div className="max-w-3xl mx-auto flex flex-col sm:flex-row items-center gap-2.5">
+          <p className="flex-1 text-sm text-gray-500 text-center sm:text-left">
+            📚 Free library book — enjoy the story!
+          </p>
+          <div className="flex gap-2 flex-shrink-0">
+            <button
+              onClick={onReadAgain}
+              className="px-4 py-2 rounded-xl border border-gray-200 text-gray-600 hover:bg-white font-semibold text-sm transition-colors"
+            >
+              📖 Read Again
+            </button>
+            <a
+              href="/library"
+              className="px-5 py-2 rounded-xl text-white font-bold text-sm transition-colors"
+              style={{ background: "#6C63FF" }}
+            >
+              📚 More Books
+            </a>
+            <a
+              href="/themes"
+              className="px-5 py-2 rounded-xl text-white font-bold text-sm transition-colors"
+              style={{ background: "#06D6A0" }}
+            >
+              ✨ Get Your Own
+            </a>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (mode === "sample") {
     return (
