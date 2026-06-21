@@ -2,6 +2,7 @@
 
 import { useState, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { useToast } from "@/hooks/use-toast";
 
 interface Props {
   childId: string;
@@ -13,22 +14,23 @@ const MAX_MB = 10;
 
 export default function ChildPhotoUpload({ childId, hasPhoto }: Props) {
   const router = useRouter();
+  const { toast } = useToast();
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
-  const [error, setError] = useState<string | null>(null);
+  const [validationError, setValidationError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
   async function handleFile(file: File) {
-    setError(null);
+    setValidationError(null);
     setSuccess(false);
 
     if (!ALLOWED_TYPES.includes(file.type)) {
-      setError("Only JPEG, PNG, or WebP images allowed.");
+      setValidationError("Only JPEG, PNG, or WebP images allowed.");
       return;
     }
     if (file.size > MAX_MB * 1024 * 1024) {
-      setError(`Image must be under ${MAX_MB}MB.`);
+      setValidationError(`Image must be under ${MAX_MB}MB.`);
       return;
     }
 
@@ -66,9 +68,11 @@ export default function ChildPhotoUpload({ childId, hasPhoto }: Props) {
 
       setProgress(100);
       setSuccess(true);
+      toast({ title: "Photo uploaded!", description: "Your child's photo is saved.", variant: "success" });
       router.refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Upload failed");
+      const msg = e instanceof Error ? e.message : "Upload failed";
+      toast({ title: "Upload failed", description: msg, variant: "error" });
     } finally {
       setUploading(false);
     }
@@ -114,7 +118,7 @@ export default function ChildPhotoUpload({ childId, hasPhoto }: Props) {
         )}
       </div>
 
-      {error && <p className="text-red-500 text-xs mt-2">{error}</p>}
+      {validationError && <p className="text-red-500 text-xs mt-2">{validationError}</p>}
 
       <p className="text-xs text-gray-400 mt-2">
         🔒 Photos are stored privately and used only for illustration generation.

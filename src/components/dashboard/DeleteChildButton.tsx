@@ -2,9 +2,11 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useToast } from "@/hooks/use-toast";
 
 export default function DeleteChildButton({ childId, childName }: { childId: string; childName: string }) {
   const router = useRouter();
+  const { toast } = useToast();
   const [confirming, setConfirming] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -14,7 +16,7 @@ export default function DeleteChildButton({ childId, childName }: { childId: str
     if (res.ok) {
       router.push("/dashboard/children");
     } else {
-      alert("Failed to delete. Please try again.");
+      toast({ title: "Delete failed", description: "Please try again.", variant: "error" });
       setDeleting(false);
       setConfirming(false);
     }

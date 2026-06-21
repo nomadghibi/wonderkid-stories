@@ -6,6 +6,7 @@ import Link from "next/link";
 import type { ChildProfile } from "@/types/child";
 import type { StoryTheme } from "@/types/theme";
 import { THEME_EMOJIS } from "@/config/themes";
+import { useToast } from "@/hooks/use-toast";
 
 interface BookTemplate {
   id: string;
@@ -38,6 +39,7 @@ function NewBookInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const templateSlug = searchParams.get("template");
+  const { toast } = useToast();
 
   // Template-first flow: child → review (2 steps)
   // Classic flow: child → theme → review (3 steps)
@@ -53,7 +55,6 @@ function NewBookInner() {
   const [selectedTheme, setSelectedTheme] = useState<string>("");
   const [dedication, setDedication] = useState("");
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     // Always fetch children
@@ -79,7 +80,6 @@ function NewBookInner() {
 
   async function handleCreate() {
     setLoading(true);
-    setError(null);
     try {
       // 1. Create book record
       const bookPayload = templateSlug && template
@@ -92,7 +92,11 @@ function NewBookInner() {
         body: JSON.stringify(bookPayload),
       });
       const bookData = await safeJson(res);
-      if (!res.ok) throw new Error(String(bookData.error ?? `Create book failed (${res.status})`));
+      if (!res.ok) {
+        toast({ title: "Couldn't create book", description: String(bookData.error ?? `Error ${res.status}`), variant: "error" });
+        setLoading(false);
+        return;
+      }
       const bookId = bookData.id as string;
 
       // 2. Checkout (mock bypasses Stripe)
@@ -102,7 +106,14 @@ function NewBookInner() {
         body: JSON.stringify({ book_id: bookId, product: "singleBook" }),
       });
       const checkout = await safeJson(checkoutRes);
-      if (!checkoutRes.ok) throw new Error(String(checkout.error ?? `Checkout failed (${checkoutRes.status})`));
+      if (!checkoutRes.ok) {
+        const msg = checkoutRes.status === 429
+          ? "Too many requests — please wait a moment and try again."
+          : String(checkout.error ?? `Checkout error ${checkoutRes.status}`);
+        toast({ title: "Payment error", description: msg, variant: "error" });
+        setLoading(false);
+        return;
+      }
 
       if (checkout.url) {
         window.location.href = checkout.url as string;
@@ -113,14 +124,28 @@ function NewBookInner() {
       const genRes = await fetch(`/api/books/${bookId}/generate`, { method: "POST" });
       const genData = await safeJson(genRes);
 
-      if (!genRes.ok || genData.queued) {
+      if (genRes.status === 429) {
+        toast({ title: "Slow down!", description: "You've reached the generation limit. Try again in an hour.", variant: "error" });
+        setLoading(false);
+        return;
+      }
+
+      if (!genRes.ok) {
+        toast({ title: "Generation failed", description: String(genData.error ?? "Unknown error"), variant: "error" });
+        setLoading(false);
+        return;
+      }
+
+      if (genData.queued) {
+        toast({ title: "Book queued!", description: "We'll email you when your storybook is ready.", variant: "success" });
         router.push(`/dashboard/books/${bookId}`);
         return;
       }
 
+      toast({ title: "Storybook created!", description: "Your personalized story is ready to read.", variant: "success" });
       router.push(`/dashboard/books/${bookId}/reader`);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Error");
+      toast({ title: "Something went wrong", description: e instanceof Error ? e.message : "Please try again.", variant: "error" });
       setLoading(false);
     }
   }
@@ -169,12 +194,6 @@ function NewBookInner() {
           {stepLabels[step - 1]}
         </div>
       </div>
-
-      {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-lg mb-4">
-          {error}
-        </div>
-      )}
 
       {/* ── Step 1: Choose child ── */}
       {step === 1 && (

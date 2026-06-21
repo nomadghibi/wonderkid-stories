@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 interface DeleteBookButtonProps {
   bookId: string;
@@ -13,20 +14,24 @@ export default function DeleteBookButton({
   redirectTo = "/dashboard/books",
   variant = "full",
 }: DeleteBookButtonProps) {
+  const { toast } = useToast();
   const [confirming, setConfirming] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
 
   async function handleDelete() {
     setLoading(true);
-    setError(null);
     try {
       const res = await fetch(`/api/books/${bookId}`, { method: "DELETE" });
       const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error ?? `Delete failed (${res.status})`);
+      if (!res.ok) {
+        toast({ title: "Delete failed", description: data.error ?? `Error ${res.status}`, variant: "error" });
+        setLoading(false);
+        setConfirming(false);
+        return;
+      }
       window.location.href = redirectTo;
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Delete failed");
+    } catch {
+      toast({ title: "Network error", description: "Please try again.", variant: "error" });
       setLoading(false);
       setConfirming(false);
     }
@@ -50,7 +55,6 @@ export default function DeleteBookButton({
         >
           Cancel
         </button>
-        {error && <span className="text-xs text-red-500">{error}</span>}
       </div>
     );
   }
