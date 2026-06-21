@@ -3,6 +3,7 @@ import { Nunito, Lexend, ABeeZee, Andika, Fredoka } from "next/font/google";
 import "./globals.css";
 import { ToastProvider } from "@/components/providers/ToastProvider";
 import { Toaster } from "@/components/ui/toaster";
+import SwRegister from "@/components/SwRegister";
 
 const nunito = Nunito({
   subsets: ["latin"],
@@ -58,6 +59,7 @@ export default function RootLayout({
           <ToastProvider>
             {children}
             <Toaster />
+            <SwRegister />
           </ToastProvider>
         </body>
     </html>

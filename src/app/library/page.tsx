@@ -41,6 +41,9 @@ export default async function LibraryPage({
           <span className="font-extrabold text-xl text-[#6C63FF]">WonderKid Stories</span>
         </Link>
         <div className="flex gap-3 items-center">
+          <Link href="/library/parent" className="text-sm text-gray-500 hover:text-[#6C63FF] font-medium">
+            👨‍👩‍👧 Parents
+          </Link>
           <Link href="/library/stats" className="text-sm text-gray-500 hover:text-[#6C63FF] font-medium">
             📊 Stats
           </Link>

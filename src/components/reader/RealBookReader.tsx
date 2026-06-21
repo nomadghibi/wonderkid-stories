@@ -16,6 +16,7 @@ import { addSession, finishBook, getStats } from "@/lib/stats";
 import { checkAndUnlock, getUnlocked, type Achievement } from "@/lib/achievements";
 import AchievementToast from "./AchievementToast";
 import PostBookScreen from "./PostBookScreen";
+import ShortcutModal from "./ShortcutModal";
 
 const LS_SIZE = "wk_font_size_v1";
 const LS_FAMILY = "wk_font_family_v1";
@@ -86,6 +87,8 @@ export default function RealBookReader({
   const [autoRate, setAutoRate] = useState<number | null>(null);
   const [autoProgress, setAutoProgress] = useState(0);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [showShortcuts, setShowShortcuts] = useState(false);
+  const [shareCopied, setShareCopied] = useState(false);
 
   const touchStartX = useRef(0);
   const goNextRef = useRef<() => void>(() => {});
@@ -147,17 +150,28 @@ export default function RealBookReader({
     setCurrentIdx(i => Math.max(0, i - step));
   }, [currentIdx, step]);
 
-  // Keyboard
+  // Keyboard — ref-based so handler always has fresh closures without re-registering
+  const keyHandlerRef = useRef<(e: KeyboardEvent) => void>(() => {});
+  keyHandlerRef.current = (e: KeyboardEvent) => {
+    if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+    if (e.key === "ArrowRight") goNext();
+    else if (e.key === "ArrowLeft") goPrev();
+    else if (e.key === "Escape") {
+      if (showShortcuts) setShowShortcuts(false);
+      else if (backHref) window.location.href = backHref;
+    }
+    else if (e.key === "f" || e.key === "F") toggleFullscreen();
+    else if (e.key === "n" || e.key === "N") setNightMode(m => !m);
+    else if (e.key === "b" || e.key === "B") toggleBookmark();
+    else if (e.key === "r" || e.key === "R") setTtsActive(a => !a);
+    else if (e.key === "?") setShowShortcuts(s => !s);
+  };
   useEffect(() => {
     if (!isOpen) return;
-    const fn = (e: KeyboardEvent) => {
-      if (e.key === "ArrowRight") goNext();
-      if (e.key === "ArrowLeft") goPrev();
-      if (e.key === "Escape" && backHref) window.location.href = backHref;
-    };
+    const fn = (e: KeyboardEvent) => keyHandlerRef.current(e);
     window.addEventListener("keydown", fn);
     return () => window.removeEventListener("keydown", fn);
-  }, [isOpen, goNext, goPrev, backHref]);
+  }, [isOpen]);
 
   // Lock body scroll when reader is open
   useEffect(() => {
@@ -474,6 +488,26 @@ export default function RealBookReader({
     } finally { setSubmittingFeedback(false); }
   }
 
+  async function handleShare() {
+    const url = window.location.href;
+    const shareData = {
+      title: data.title,
+      text: `Read "${data.title}" — a free interactive children's book on WonderKid Stories!`,
+      url,
+    };
+    try {
+      if (navigator.share && navigator.canShare?.(shareData)) {
+        await navigator.share(shareData);
+        return;
+      }
+    } catch { /* user cancelled */ return; }
+    try {
+      await navigator.clipboard.writeText(url);
+      setShareCopied(true);
+      setTimeout(() => setShareCopied(false), 2000);
+    } catch { /* ignore */ }
+  }
+
   function toggleFullscreen() {
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen().catch(() => {});
@@ -602,6 +636,17 @@ export default function RealBookReader({
               🔥 {streakCount}
             </span>
           )}
+          <button
+            onClick={handleShare}
+            title="Share this book"
+            className="hidden sm:flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-lg border transition-all flex-shrink-0"
+            style={{
+              borderColor: shareCopied ? "#06D6A0" : (nightMode ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.1)"),
+              color: shareCopied ? "#06D6A0" : (nightMode ? "#a89070" : "#6b7280"),
+            }}
+          >
+            {shareCopied ? "✓ Copied" : "📤 Share"}
+          </button>
         </div>
 
         {/* Center: mode badge */}
@@ -672,6 +717,20 @@ export default function RealBookReader({
             }}
           >
             {isFullscreen ? "⊡" : "⛶"}
+          </button>
+
+          {/* Keyboard shortcut help */}
+          <button
+            onClick={() => setShowShortcuts(s => !s)}
+            title="Keyboard shortcuts (?)"
+            className="text-xs font-bold w-6 h-6 rounded-full border flex items-center justify-center hidden sm:flex transition-all"
+            style={{
+              borderColor: showShortcuts ? "#6C63FF" : (nightMode ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.1)"),
+              color: showShortcuts ? "#6C63FF" : (nightMode ? "#a89070" : "#9ca3af"),
+              background: showShortcuts ? "rgba(108,99,255,0.08)" : "transparent",
+            }}
+          >
+            ?
           </button>
 
           {isImageOnlyBook ? (
@@ -968,6 +1027,11 @@ export default function RealBookReader({
             setNewAchievements([]);
           }}
         />
+      )}
+
+      {/* ── Keyboard shortcut modal ───────────────────────────────────────── */}
+      {showShortcuts && (
+        <ShortcutModal onClose={() => setShowShortcuts(false)} nightMode={nightMode} />
       )}
 
       {/* ── Achievement toast ─────────────────────────────────────────────── */}
