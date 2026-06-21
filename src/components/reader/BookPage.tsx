@@ -113,6 +113,35 @@ export default function BookPage({
   const fs = FONT_SIZE_PX[fontSize];
   const ff = fontFamily ? FONT_FAMILY_CSS[fontFamily] : "var(--font-nunito)";
 
+  // Full-page layout: image fills entire page, no text panel (text is already in image)
+  if (page.layoutType === "full_page") {
+    return (
+      <div
+        className="relative overflow-hidden select-none"
+        style={{ height: "100%", width: "100%", background: "#000" }}
+      >
+        <Image
+          src={imageUrl}
+          alt={page.title ?? `Page ${page.pageNumber}`}
+          fill
+          className="object-contain"
+          unoptimized
+          priority={isCover}
+        />
+        {/* Page label */}
+        {pageLabel && (
+          <div
+            className={`absolute bottom-1.5 text-[10px] text-white/60 font-medium tabular-nums backdrop-blur-sm px-1 rounded ${
+              side === "left" ? "left-2.5" : "right-2.5"
+            }`}
+          >
+            {pageLabel}
+          </div>
+        )}
+      </div>
+    );
+  }
+
   // Image takes exactly 62% (cover 67%), text takes rest — no overflow
   const imagePercent = isCover ? 67 : 62;
   const textPercent = 100 - imagePercent;

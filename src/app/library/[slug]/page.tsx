@@ -45,6 +45,7 @@ export default async function LibraryBookReaderPage({ params }: Params) {
     title: p.title ?? undefined,
     text: p.text_content ?? undefined,
     imageUrl: p.image_url ?? undefined,
+    layoutType: p.layout_type,
   }));
 
   const coverPage = readerPages.find((p) => p.pageType === "cover");

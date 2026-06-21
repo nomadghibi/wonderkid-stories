@@ -53,6 +53,7 @@ export interface BookReaderPage {
   title?: string;
   text?: string;
   imageUrl?: string;
+  layoutType?: string;
 }
 
 export interface BookReaderData {

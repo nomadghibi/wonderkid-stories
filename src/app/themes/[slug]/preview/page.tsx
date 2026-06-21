@@ -64,6 +64,7 @@ export default async function TemplatePreviewPage({ params }: Params) {
     title: fill(page.title_template, child),
     text: fill(page.placeholder_text ?? page.story_beat, child),
     imageUrl: undefined,
+    layoutType: page.layout_type,
   }));
 
   const readerData: BookReaderData = {
