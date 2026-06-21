@@ -122,15 +122,18 @@ export default async function LibraryPage({
                 >
                   {/* Cover */}
                   <div
-                    className="h-40 flex items-center justify-center relative overflow-hidden"
-                    style={{ background: `linear-gradient(135deg, ${coverBg}dd, ${coverBg}99)` }}
+                    className="relative overflow-hidden flex items-center justify-center"
+                    style={{
+                      background: `linear-gradient(135deg, ${coverBg}dd, ${coverBg}99)`,
+                      aspectRatio: book.cover_image_url ? "3/4" : "5/3",
+                    }}
                   >
                     {book.cover_image_url ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
                         src={book.cover_image_url}
                         alt={book.title}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-contain"
                       />
                     ) : (
                       <div className="text-center text-white px-4">
