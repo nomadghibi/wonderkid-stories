@@ -8,24 +8,25 @@
 insert into public.library_books
   (subject_id, slug, title, subtitle, description,
    reading_level, age_min, age_max, page_count,
-   cover_color, book_type, is_free, is_active, sort_order)
+   cover_image_url, cover_color, book_type, is_free, is_active, sort_order)
 select s.id,
   'liams-big-dream',
-  'Liam''s Big Dream Adventure',
-  'A magical journey of bravery, kindness, and believing in yourself',
+  'Liam''s Dream Under the Stars',
+  'A Story of Wonder, Hope, and Big Dreams',
   'Liam is a curious boy with a big heart and an even bigger dream. One night he makes a wish on a falling star — and the very next morning, a glowing map appears under his pillow pointing to the Forest of Dreams.',
   'early_reader', 5, 9, 10,
+  '/library/liam-big-dream/cover.png',
   '5B21B6', 'ready_made', true, true, 10
 from public.subjects s where s.slug = 'adventure'
 on conflict (slug) do nothing;
 
--- Cover page (uses page-1 illustration — Liam at window gazing at stars)
+-- Cover page
 insert into public.library_book_pages
   (book_id, page_number, page_type, title, text_content, image_url, layout_type)
 select b.id, 0, 'cover',
-  'Liam''s Big Dream Adventure',
-  'A magical journey of bravery, kindness, and believing in yourself.',
-  '/library/liam-big-dream/page-1.png',
+  'Liam''s Dream Under the Stars',
+  'A Story of Wonder, Hope, and Big Dreams.',
+  '/library/liam-big-dream/cover.png',
   'cover_full'
 from public.library_books b where b.slug = 'liams-big-dream'
 on conflict (book_id, page_number) do nothing;
