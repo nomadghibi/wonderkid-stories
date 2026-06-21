@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import BillingCard from "./BillingCard";
 
 export default async function SettingsPage() {
   const supabase = await createClient();
@@ -33,6 +34,8 @@ export default async function SettingsPage() {
           </div>
         </dl>
       </div>
+
+      <BillingCard />
 
       <div className="bg-white border border-gray-100 rounded-2xl p-6">
         <h2 className="font-bold text-[#24304A] mb-3">Privacy & Data</h2>

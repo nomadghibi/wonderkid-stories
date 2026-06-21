@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Nunito, Lexend, ABeeZee, Andika, Fredoka } from "next/font/google";
 import "./globals.css";
+import { ToastProvider } from "@/components/providers/ToastProvider";
+import { Toaster } from "@/components/ui/toaster";
 
 const nunito = Nunito({
   subsets: ["latin"],
@@ -52,7 +54,12 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className={`${nunito.variable} ${lexend.variable} ${abeezee.variable} ${andika.variable} ${fredoka.variable}`}>
-      <body className="font-[family-name:var(--font-nunito)] antialiased">{children}</body>
+      <body className="font-[family-name:var(--font-nunito)] antialiased">
+          <ToastProvider>
+            {children}
+            <Toaster />
+          </ToastProvider>
+        </body>
     </html>
   );
 }

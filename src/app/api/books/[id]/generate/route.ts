@@ -18,6 +18,7 @@ import { checkBookQuality } from "@/agents/quality-agent";
 
 import type { ChildProfile } from "@/types/child";
 import type { StoryTheme } from "@/types/theme";
+import { rateLimit } from "@/lib/rate-limit";
 
 const MOCK_AI = process.env.MOCK_AI_MODE === "true";
 
@@ -28,6 +29,14 @@ export async function POST(_req: Request, { params }: Params) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+  const rl = rateLimit(`generate:${user.id}`, 5, 60 * 60 * 1000);
+  if (!rl.success) {
+    return NextResponse.json(
+      { error: "Too many requests. Try again in an hour." },
+      { status: 429, headers: { "Retry-After": String(Math.ceil((rl.resetAt - Date.now()) / 1000)) } }
+    );
+  }
 
   // In real mode, queue via Inngest and return immediately
   if (!MOCK_AI && process.env.INNGEST_EVENT_KEY) {

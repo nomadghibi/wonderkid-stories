@@ -4,6 +4,7 @@ import { stripe, MOCK_PAYMENT_MODE } from "@/lib/stripe";
 import { PRICING } from "@/config/pricing";
 import { siteConfig } from "@/config/site";
 import { z } from "zod";
+import { rateLimit } from "@/lib/rate-limit";
 
 const schema = z.object({
   book_id: z.string().uuid(),
@@ -18,6 +19,11 @@ export async function POST(request: Request) {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    const rl = rateLimit(`checkout:${user.id}`, 10, 10 * 60 * 1000);
+    if (!rl.success) {
+      return NextResponse.json({ error: "Too many requests. Please wait before trying again." }, { status: 429 });
+    }
 
     const body = await request.json();
     const parsed = schema.safeParse(body);
